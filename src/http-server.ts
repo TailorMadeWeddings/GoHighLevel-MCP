@@ -7,13 +7,16 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID } from 'node:crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
-  McpError
+  McpError,
+  isInitializeRequest
 } from '@modelcontextprotocol/sdk/types.js';
 import * as dotenv from 'dotenv';
 
@@ -80,6 +83,8 @@ class GHLMCPHttpServer {
   private accounts: Map<string, AccountToolSet> = new Map();
   private activeAccountName: string = '';
   private port: number;
+  // Streamable HTTP session management
+  private streamableTransports: Map<string, StreamableHTTPServerTransport> = new Map();
 
   constructor() {
     this.port = parseInt(process.env.PORT || process.env.MCP_SERVER_PORT || '8000');
@@ -104,8 +109,10 @@ class GHLMCPHttpServer {
     // Initialize all GHL accounts
     this.initializeAccounts();
 
-    // Setup MCP handlers
-    this.setupMCPHandlers();
+    // Register handlers on the legacy SSE server instance
+    this.registerMCPHandlers(this.server);
+
+    // Setup HTTP routes (SSE, Streamable HTTP, OAuth, etc.)
     this.setupRoutes();
   }
 
@@ -267,11 +274,31 @@ class GHLMCPHttpServer {
   }
 
   /**
-   * Setup MCP request handlers
+   * Create a new MCP Server instance with all handlers registered.
+   * Used by Streamable HTTP transport (each session gets its own Server).
    */
-  private setupMCPHandlers(): void {
+  private createMCPServer(): Server {
+    const server = new Server(
+      {
+        name: 'ghl-mcp-server',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      }
+    );
+    this.registerMCPHandlers(server);
+    return server;
+  }
+
+  /**
+   * Register MCP request handlers on a Server instance.
+   */
+  private registerMCPHandlers(server: Server): void {
     // Handle list tools requests
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       console.log('[GHL MCP HTTP] Listing available tools...');
 
       try {
@@ -315,7 +342,7 @@ class GHLMCPHttpServer {
     });
 
     // Handle tool execution requests
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
       console.log(`[GHL MCP HTTP] Executing tool: ${name} (account: ${this.activeAccountName})`);
@@ -565,6 +592,93 @@ class GHLMCPHttpServer {
     this.app.get('/sse', requireAuth, handleSSE);
     this.app.post('/sse', requireAuth, handleSSE);
 
+    // ================================================================
+    // Streamable HTTP transport at /mcp
+    // This is the modern MCP transport used by Claude connectors.
+    // Each session gets its own Server + StreamableHTTPServerTransport.
+    // Sessions are tracked via the Mcp-Session-Id header.
+    // ================================================================
+
+    // POST /mcp — handles initialize + all subsequent JSON-RPC messages
+    this.app.post('/mcp', requireAuth, async (req: express.Request, res: express.Response) => {
+      try {
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
+        let transport: StreamableHTTPServerTransport;
+
+        if (sessionId && this.streamableTransports.has(sessionId)) {
+          // Existing session — reuse transport
+          transport = this.streamableTransports.get(sessionId)!;
+        } else if (!sessionId && isInitializeRequest(req.body)) {
+          // New initialization request — create fresh Server + transport
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (sid: string) => {
+              console.log(`[GHL MCP HTTP] Streamable session initialized: ${sid}`);
+              this.streamableTransports.set(sid, transport);
+            }
+          });
+
+          transport.onclose = () => {
+            const sid = transport.sessionId;
+            if (sid && this.streamableTransports.has(sid)) {
+              console.log(`[GHL MCP HTTP] Streamable session closed: ${sid}`);
+              this.streamableTransports.delete(sid);
+            }
+          };
+
+          // Each session gets its own MCP Server with all handlers
+          const mcpServer = this.createMCPServer();
+          await mcpServer.connect(transport);
+          await transport.handleRequest(req, res, req.body);
+          return;
+        } else {
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Bad Request: No valid session ID provided',
+            },
+            id: null,
+          });
+          return;
+        }
+
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        console.error('[GHL MCP HTTP] Error handling /mcp POST:', error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: { code: -32603, message: 'Internal server error' },
+            id: null,
+          });
+        }
+      }
+    });
+
+    // GET /mcp — SSE stream for server-initiated messages within a session
+    this.app.get('/mcp', requireAuth, async (req: express.Request, res: express.Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      if (!sessionId || !this.streamableTransports.has(sessionId)) {
+        res.status(400).send('Invalid or missing session ID');
+        return;
+      }
+      const transport = this.streamableTransports.get(sessionId)!;
+      await transport.handleRequest(req, res);
+    });
+
+    // DELETE /mcp — session termination
+    this.app.delete('/mcp', requireAuth, async (req: express.Request, res: express.Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      if (!sessionId || !this.streamableTransports.has(sessionId)) {
+        res.status(400).send('Invalid or missing session ID');
+        return;
+      }
+      console.log(`[GHL MCP HTTP] Session termination request: ${sessionId}`);
+      const transport = this.streamableTransports.get(sessionId)!;
+      await transport.handleRequest(req, res);
+    });
+
     // Root endpoint with server info
     this.app.get('/', (req, res) => {
       res.json({
@@ -575,7 +689,8 @@ class GHLMCPHttpServer {
           health: '/health',
           capabilities: '/capabilities',
           tools: '/tools',
-          sse: '/sse'
+          mcp: '/mcp (Streamable HTTP)',
+          sse: '/sse (legacy)'
         },
         accounts: this.accounts.size,
         activeAccount: this.activeAccountName,
