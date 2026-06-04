@@ -73,13 +73,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       issuer,
     });
 
-    // Verify audience includes our resource identifier.
-    // Without this, a token minted for another resource in the same Stytch project could be replayed.
-    const resourceId = process.env.MCP_RESOURCE_IDENTIFIER;
-    if (resourceId) {
+    // Verify audience includes the Stytch project ID.
+    // Connected Apps tokens set aud to the project ID, not the resource URL.
+    const projectId = process.env.STYTCH_PROJECT_ID;
+    if (projectId) {
       const aud: string[] = Array.isArray(payload.aud) ? payload.aud : (payload.aud ? [payload.aud] : []);
-      if (!aud.includes(resourceId)) {
-        console.error('[Auth] audience mismatch, aud =', aud, ', expected =', resourceId);
+      if (!aud.includes(projectId)) {
+        console.error('[Auth] audience mismatch, aud =', aud, ', expected =', projectId);
         res.setHeader('WWW-Authenticate', buildWwwAuthHeader(req));
         res.status(401).json({ error: 'Unauthorized' });
         return;
