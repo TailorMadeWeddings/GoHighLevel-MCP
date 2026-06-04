@@ -457,8 +457,8 @@ class GHLMCPHttpServer {
       });
     });
 
-    // MCP capabilities endpoint
-    this.app.get('/capabilities', (req, res) => {
+    // MCP capabilities endpoint (guarded)
+    this.app.get('/capabilities', requireAuth, (req, res) => {
       res.json({
         capabilities: {
           tools: {},
@@ -470,8 +470,8 @@ class GHLMCPHttpServer {
       });
     });
 
-    // Tools listing endpoint
-    this.app.get('/tools', async (req, res) => {
+    // Tools listing endpoint (guarded — leaks tool surface if open)
+    this.app.get('/tools', requireAuth, async (req, res) => {
       try {
         const acct = this.getActiveAccount();
         const allTools = [

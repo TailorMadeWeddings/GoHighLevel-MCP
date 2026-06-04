@@ -72,6 +72,20 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   try {
     const tokenData = await client.idp.introspectTokenLocal(token);
+
+    // Verify audience includes our resource identifier (not just the Stytch project).
+    // Without this, a token minted for another app in the same Stytch project would pass.
+    const resourceId = process.env.MCP_RESOURCE_IDENTIFIER;
+    if (resourceId && tokenData.audience) {
+      const aud = Array.isArray(tokenData.audience) ? tokenData.audience : [tokenData.audience];
+      if (!aud.includes(resourceId)) {
+        console.error(`[Auth] Token audience ${JSON.stringify(aud)} does not include resource ${resourceId}`);
+        res.setHeader('WWW-Authenticate', buildWwwAuthHeader(req));
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+    }
+
     (req as any).user = tokenData;
     return next();
   } catch (err) {
