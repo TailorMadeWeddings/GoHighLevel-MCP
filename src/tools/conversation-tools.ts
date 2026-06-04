@@ -740,28 +740,41 @@ export class ConversationTools {
   /**
    * GET CONVERSATION
    */
-  private async getConversation(params: MCPGetConversationParams): Promise<{ success: boolean; conversation: GHLConversation; messages: GHLMessage[]; hasMoreMessages: boolean; message: string }> {
+  private async getConversation(params: MCPGetConversationParams): Promise<{ success: boolean; conversation: GHLConversation; messages?: GHLMessage[]; hasMoreMessages?: boolean; message: string }> {
     try {
-      // Get conversation details
-      const conversationResponse = await this.ghlClient.getConversation(params.conversationId);
+      // Run both API calls in parallel instead of sequentially to cut wall time in half
+      const [conversationResponse, messagesResponse] = await Promise.all([
+        this.ghlClient.getConversation(params.conversationId),
+        this.ghlClient.getConversationMessages(
+          params.conversationId,
+          {
+            limit: params.limit || 20,
+            type: params.messageTypes?.join(',')
+          }
+        ).catch((err) => {
+          // Messages call can timeout on large conversations — don't fail the whole request
+          console.error(`[get_conversation] Messages fetch failed (returning conversation without messages): ${err}`);
+          return null;
+        })
+      ]);
+
       const conversation = conversationResponse.data as GHLConversation;
 
-      // Get messages
-      const messagesResponse = await this.ghlClient.getConversationMessages(
-        params.conversationId,
-        {
-          limit: params.limit || 20,
-          type: params.messageTypes?.join(',')
-        }
-      );
-      const messagesData = messagesResponse.data as GHLGetMessagesResponse;
-      
+      if (messagesResponse) {
+        const messagesData = messagesResponse.data as GHLGetMessagesResponse;
+        return {
+          success: true,
+          conversation,
+          messages: messagesData.messages,
+          hasMoreMessages: messagesData.nextPage,
+          message: `Retrieved conversation with ${messagesData.messages.length} messages`
+        };
+      }
+
       return {
         success: true,
         conversation,
-        messages: messagesData.messages,
-        hasMoreMessages: messagesData.nextPage,
-        message: `Retrieved conversation with ${messagesData.messages.length} messages`
+        message: 'Retrieved conversation metadata (messages fetch timed out — try with a smaller limit or filter by messageTypes)'
       };
     } catch (error) {
       throw new Error(`Failed to get conversation: ${error}`);
