@@ -1,36 +1,32 @@
 /**
  * OAuth 2.1 Resource Server Middleware
- * Validates Stytch-issued bearer tokens on MCP transport routes.
+ * Validates Stytch Connected Apps bearer tokens using direct JWT verification
+ * via jose against the project's JWKS endpoint.
+ *
  * When no token is present, returns 401 with WWW-Authenticate header
  * pointing to the protected resource metadata — this triggers Claude's
  * OAuth discovery + dynamic client registration flow.
  */
 
 import { Request, Response, NextFunction } from 'express';
-import * as stytch from 'stytch';
+import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose';
 
-let stytchClient: stytch.Client | null = null;
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 /**
- * Lazily initialize the Stytch client.
- * Returns null if Stytch env vars are not configured (OAuth disabled).
+ * Lazily build a cached JWKS fetcher for the Stytch project's vanity domain.
+ * Returns null if STYTCH_PROJECT_DOMAIN is not configured (OAuth disabled).
  */
-function getStytchClient(): stytch.Client | null {
-  if (stytchClient) return stytchClient;
+function getJWKS(): ReturnType<typeof createRemoteJWKSet> | null {
+  if (jwks) return jwks;
 
-  const projectId = process.env.STYTCH_PROJECT_ID;
-  const secret = process.env.STYTCH_SECRET;
+  const domain = process.env.STYTCH_PROJECT_DOMAIN;
+  if (!domain) return null;
 
-  if (!projectId || !secret) {
-    return null;
-  }
-
-  stytchClient = new stytch.Client({
-    project_id: projectId,
-    secret: secret,
-  });
-
-  return stytchClient;
+  // Stytch publishes JWKS at the standard OIDC path
+  const jwksUrl = new URL('/.well-known/jwks.json', domain);
+  jwks = createRemoteJWKSet(jwksUrl);
+  return jwks;
 }
 
 /**
@@ -50,14 +46,14 @@ function buildWwwAuthHeader(req: Request): string {
 
 /**
  * Express middleware that enforces bearer token authentication.
- * - If Stytch is not configured (no env vars), requests pass through (open mode).
+ * - If Stytch is not configured (no STYTCH_PROJECT_DOMAIN), requests pass through (open mode).
  * - If Stytch is configured, a valid bearer token is required.
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const client = getStytchClient();
+  const keySet = getJWKS();
 
   // If Stytch is not configured, skip auth (open mode for local dev)
-  if (!client) {
+  if (!keySet) {
     return next();
   }
 
@@ -71,22 +67,26 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const tokenData = await client.idp.introspectTokenLocal(token);
+    // Validate signature, expiry, and issuer directly against the vanity domain
+    const issuer = process.env.STYTCH_PROJECT_DOMAIN!;
+    const { payload } = await jwtVerify(token, keySet, {
+      issuer,
+    });
 
-    // Verify audience includes our resource identifier (not just the Stytch project).
-    // Without this, a token minted for another app in the same Stytch project would pass.
+    // Verify audience includes our resource identifier.
+    // Without this, a token minted for another resource in the same Stytch project could be replayed.
     const resourceId = process.env.MCP_RESOURCE_IDENTIFIER;
-    if (resourceId && tokenData.audience) {
-      const aud = Array.isArray(tokenData.audience) ? tokenData.audience : [tokenData.audience];
+    if (resourceId) {
+      const aud: string[] = Array.isArray(payload.aud) ? payload.aud : (payload.aud ? [payload.aud] : []);
       if (!aud.includes(resourceId)) {
-        console.error(`[Auth] Token audience ${JSON.stringify(aud)} does not include resource ${resourceId}`);
+        console.error('[Auth] audience mismatch, aud =', aud, ', expected =', resourceId);
         res.setHeader('WWW-Authenticate', buildWwwAuthHeader(req));
         res.status(401).json({ error: 'Unauthorized' });
         return;
       }
     }
 
-    (req as any).user = tokenData;
+    (req as any).user = payload;
     return next();
   } catch (err) {
     console.error('[Auth] Token validation failed:', err);
@@ -97,8 +97,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 /**
- * Check if OAuth is enabled (Stytch env vars are set).
+ * Check if OAuth is enabled (Stytch project domain is set).
  */
 export function isOAuthEnabled(): boolean {
-  return !!(process.env.STYTCH_PROJECT_ID && process.env.STYTCH_SECRET);
+  return !!process.env.STYTCH_PROJECT_DOMAIN;
 }
