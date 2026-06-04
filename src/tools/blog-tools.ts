@@ -383,18 +383,18 @@ export class BlogTools {
       };
 
       // Only include fields that are provided
-      if (params.title) updateData.title = params.title;
-      if (params.content) updateData.rawHTML = params.content;
-      if (params.description) updateData.description = params.description;
-      if (params.imageUrl) updateData.imageUrl = params.imageUrl;
-      if (params.imageAltText) updateData.imageAltText = params.imageAltText;
-      if (params.urlSlug) updateData.urlSlug = params.urlSlug;
-      if (params.author) updateData.author = params.author;
-      if (params.categories) updateData.categories = params.categories;
-      if (params.tags) updateData.tags = params.tags;
-      if (params.status) updateData.status = params.status;
-      if (params.canonicalLink) updateData.canonicalLink = params.canonicalLink;
-      if (params.publishedAt) updateData.publishedAt = params.publishedAt;
+      if (params.title !== undefined) updateData.title = params.title;
+      if (params.content !== undefined) updateData.rawHTML = params.content;
+      if (params.description !== undefined) updateData.description = params.description;
+      if (params.imageUrl !== undefined) updateData.imageUrl = params.imageUrl;
+      if (params.imageAltText !== undefined) updateData.imageAltText = params.imageAltText;
+      if (params.urlSlug !== undefined) updateData.urlSlug = params.urlSlug;
+      if (params.author !== undefined) updateData.author = params.author;
+      if (params.categories !== undefined) updateData.categories = params.categories;
+      if (params.tags !== undefined) updateData.tags = params.tags;
+      if (params.status !== undefined) updateData.status = params.status;
+      if (params.canonicalLink !== undefined) updateData.canonicalLink = params.canonicalLink;
+      if (params.publishedAt !== undefined) updateData.publishedAt = params.publishedAt;
 
       const result = await this.ghlClient.updateBlogPost(params.postId, updateData);
       

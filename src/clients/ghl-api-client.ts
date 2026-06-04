@@ -428,6 +428,7 @@ export class GHLApiClient {
         console.error('[GHL API] Response error:', {
           status: error.response?.status,
           message: error.response?.data?.message,
+          data: JSON.stringify(error.response?.data),
           url: error.config?.url
         });
         return Promise.reject(this.handleApiError(error));
@@ -463,6 +464,30 @@ export class GHLApiClient {
     return {
       'Authorization': `Bearer ${this.config.accessToken}`,
       'Version': '2021-04-15', // Conversations API uses different version
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  }
+
+  /**
+   * Create custom headers for Calendar API (uses version 2021-04-15)
+   */
+  private getCalendarHeaders() {
+    return {
+      'Authorization': `Bearer ${this.config.accessToken}`,
+      'Version': '2021-04-15', // Calendar API version
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  }
+
+  /**
+   * Create custom headers for Email Builder API (uses same version as default: 2021-07-28)
+   */
+  private getEmailBuilderHeaders() {
+    return {
+      'Authorization': `Bearer ${this.config.accessToken}`,
+      'Version': '2021-07-28', // Email Builder API version per OpenAPI spec
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
@@ -640,8 +665,8 @@ export class GHLApiClient {
         locationId: this.config.locationId
       };
 
-      if (email) params.email = encodeURIComponent(email);
-      if (phone) params.number = encodeURIComponent(phone);
+      if (email) params.email = email;
+      if (phone) params.number = phone;
 
       const response: AxiosResponse<{ contact?: GHLContact }> = await this.axiosInstance.get(
         '/contacts/search/duplicate',
@@ -879,6 +904,8 @@ export class GHLApiClient {
     try {
       const messageData: GHLSendMessageRequest = {
         type: 'SMS',
+        subType: 'sms',
+        status: 'pending',
         contactId,
         message,
         fromNumber
@@ -910,6 +937,8 @@ export class GHLApiClient {
     try {
       const messageData: GHLSendMessageRequest = {
         type: 'Email',
+        subType: 'email',
+        status: 'pending',
         contactId,
         subject,
         message,
@@ -1353,19 +1382,19 @@ export class GHLApiClient {
 
   /**
    * Bulk update contact tags
-   * POST /contacts/tags/bulk
+   * POST /contacts/bulk/tags/update/{operation}
    */
   async bulkUpdateContactTags(contactIds: string[], tags: string[], operation: 'add' | 'remove', removeAllTags?: boolean): Promise<GHLApiResponse<GHLBulkTagsResponse>> {
     try {
       const payload = {
-        ids: contactIds,
+        contacts: contactIds,
         tags,
-        operation,
+        locationId: this.config.locationId,
         ...(removeAllTags !== undefined && { removeAllTags })
       };
 
       const response: AxiosResponse<GHLBulkTagsResponse> = await this.axiosInstance.post(
-        '/contacts/tags/bulk',
+        `/contacts/bulk/tags/update/${operation}`,
         payload
       );
 
@@ -1377,17 +1406,18 @@ export class GHLApiClient {
 
   /**
    * Bulk update contact business
-   * POST /contacts/business/bulk
+   * POST /contacts/bulk/business
    */
   async bulkUpdateContactBusiness(contactIds: string[], businessId?: string): Promise<GHLApiResponse<GHLBulkBusinessResponse>> {
     try {
       const payload = {
         ids: contactIds,
-        businessId: businessId || null
+        businessId: businessId || null,
+        locationId: this.config.locationId
       };
 
       const response: AxiosResponse<GHLBulkBusinessResponse> = await this.axiosInstance.post(
-        '/contacts/business/bulk',
+        '/contacts/bulk/business',
         payload
       );
 
@@ -1474,7 +1504,7 @@ export class GHLApiClient {
   async removeContactFromAllCampaigns(contactId: string): Promise<GHLApiResponse<{ succeded: boolean }>> {
     try {
       const response: AxiosResponse<{ succeded: boolean }> = await this.axiosInstance.delete(
-        `/contacts/${contactId}/campaigns`
+        `/contacts/${contactId}/campaigns/removeAll`
       );
 
       return this.wrapResponse(response.data);
@@ -1860,7 +1890,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLGetCalendarGroupsResponse> = await this.axiosInstance.get(
         '/calendars/groups',
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1882,7 +1912,8 @@ export class GHLApiClient {
 
       const response: AxiosResponse<{ group: GHLCalendarGroup }> = await this.axiosInstance.post(
         '/calendars/groups',
-        payload
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1905,7 +1936,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLGetCalendarsResponse> = await this.axiosInstance.get(
         '/calendars/',
-        { params: queryParams }
+        { params: queryParams, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1927,7 +1958,8 @@ export class GHLApiClient {
 
       const response: AxiosResponse<{ calendar: GHLCalendar }> = await this.axiosInstance.post(
         '/calendars/',
-        payload
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1943,7 +1975,8 @@ export class GHLApiClient {
   async getCalendar(calendarId: string): Promise<GHLApiResponse<{ calendar: GHLCalendar }>> {
     try {
       const response: AxiosResponse<{ calendar: GHLCalendar }> = await this.axiosInstance.get(
-        `/calendars/${calendarId}`
+        `/calendars/${calendarId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1960,7 +1993,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<{ calendar: GHLCalendar }> = await this.axiosInstance.put(
         `/calendars/${calendarId}`,
-        updates
+        updates,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -1976,7 +2010,8 @@ export class GHLApiClient {
   async deleteCalendar(calendarId: string): Promise<GHLApiResponse<{ success: boolean }>> {
     try {
       const response: AxiosResponse<{ success: boolean }> = await this.axiosInstance.delete(
-        `/calendars/${calendarId}`
+        `/calendars/${calendarId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2002,7 +2037,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLGetCalendarEventsResponse> = await this.axiosInstance.get(
         '/calendars/events',
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2028,7 +2063,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLGetCalendarEventsResponse> = await this.axiosInstance.get(
         '/calendars/blocked-slots',
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2054,7 +2089,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLGetFreeSlotsResponse> = await this.axiosInstance.get(
         `/calendars/${slotParams.calendarId}/free-slots`,
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2076,7 +2111,8 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLCalendarEvent> = await this.axiosInstance.post(
         '/calendars/events/appointments',
-        payload
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2092,7 +2128,8 @@ export class GHLApiClient {
   async getAppointment(appointmentId: string): Promise<GHLApiResponse<{ event: GHLCalendarEvent }>> {
     try {
       const response: AxiosResponse<{ event: GHLCalendarEvent }> = await this.axiosInstance.get(
-        `/calendars/events/appointments/${appointmentId}`
+        `/calendars/events/appointments/${appointmentId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2109,7 +2146,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<GHLCalendarEvent> = await this.axiosInstance.put(
         `/calendars/events/appointments/${appointmentId}`,
-        updates
+        updates,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2119,13 +2157,14 @@ export class GHLApiClient {
   }
 
   /**
-   * Delete appointment by ID  
-   * DELETE /calendars/events/appointments/{eventId}
+   * Delete appointment by ID
+   * DELETE /calendars/events/{eventId}
    */
   async deleteAppointment(appointmentId: string): Promise<GHLApiResponse<{ succeeded: boolean }>> {
     try {
       const response: AxiosResponse<{ succeeded: boolean }> = await this.axiosInstance.delete(
-        `/calendars/events/appointments/${appointmentId}`
+        `/calendars/events/${appointmentId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2144,7 +2183,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<GHLBlockSlotResponse> = await this.axiosInstance.put(
         `/calendars/events/block-slots/${blockSlotId}`,
-        updates
+        updates,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2163,7 +2203,8 @@ export class GHLApiClient {
         params: {
           locationId: this.config.locationId,
           ...params
-        }
+        },
+        headers: this.getEmailBuilderHeaders()
       });
       return this.wrapResponse(response.data);
     } catch (error) {
@@ -2177,6 +2218,8 @@ export class GHLApiClient {
         locationId: this.config.locationId,
         type: 'html',
         ...params
+      }, {
+        headers: this.getEmailBuilderHeaders()
       });
       return this.wrapResponse(response.data);
     } catch (error) {
@@ -2190,7 +2233,8 @@ export class GHLApiClient {
         params: {
           locationId: this.config.locationId,
           ...params
-        }
+        },
+        headers: this.getEmailBuilderHeaders()
       });
       return this.wrapResponse(response.data);
     } catch (error) {
@@ -2200,12 +2244,17 @@ export class GHLApiClient {
 
   async updateEmailTemplate(params: MCPUpdateEmailTemplateParams): Promise<GHLApiResponse<any>> {
     try {
-      const { templateId, ...data } = params;
+      const { templateId, html, previewText } = params;
       const response: AxiosResponse<any> = await this.axiosInstance.post('/emails/builder/data', {
         locationId: this.config.locationId,
         templateId,
-        ...data,
-        editorType: 'html'
+        updatedBy: this.config.locationId,
+        html,
+        dnd: { elements: [], attrs: {}, templateSettings: {} },
+        editorType: 'html',
+        ...(previewText !== undefined && { previewText })
+      }, {
+        headers: this.getEmailBuilderHeaders()
       });
       return this.wrapResponse(response.data);
     } catch (error) {
@@ -2216,7 +2265,9 @@ export class GHLApiClient {
   async deleteEmailTemplate(params: MCPDeleteEmailTemplateParams): Promise<GHLApiResponse<any>> {
     try {
       const { templateId } = params;
-      const response: AxiosResponse<any> = await this.axiosInstance.delete(`/emails/builder/${this.config.locationId}/${templateId}`);
+      const response: AxiosResponse<any> = await this.axiosInstance.delete(`/emails/builder/${this.config.locationId}/${templateId}`, {
+        headers: this.getEmailBuilderHeaders()
+      });
       return this.wrapResponse(response.data);
     } catch (error) {
       throw this.handleApiError(error as AxiosError<GHLErrorResponse>);
@@ -2737,7 +2788,8 @@ export class GHLApiClient {
   async getEmailMessage(emailMessageId: string): Promise<GHLApiResponse<GHLEmailMessage>> {
     try {
       const response: AxiosResponse<GHLEmailMessage> = await this.axiosInstance.get(
-        `/conversations/messages/email/${emailMessageId}`
+        `/conversations/messages/email/${emailMessageId}`,
+        { headers: this.getConversationHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -2753,7 +2805,8 @@ export class GHLApiClient {
   async cancelScheduledEmail(emailMessageId: string): Promise<GHLApiResponse<GHLCancelScheduledResponse>> {
     try {
       const response: AxiosResponse<GHLCancelScheduledResponse> = await this.axiosInstance.delete(
-        `/conversations/messages/email/${emailMessageId}/schedule`
+        `/conversations/messages/email/${emailMessageId}/schedule`,
+        { headers: this.getConversationHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3283,18 +3336,19 @@ export class GHLApiClient {
 
   /**
    * Validate calendar group slug
-   * GET /calendars/groups/slug/validate
+   * POST /calendars/groups/validate-slug
    */
   async validateCalendarGroupSlug(slug: string, locationId?: string): Promise<GHLApiResponse<GHLValidateGroupSlugResponse>> {
     try {
-      const params = {
+      const payload = {
         locationId: locationId || this.config.locationId,
         slug
       };
 
-      const response: AxiosResponse<GHLValidateGroupSlugResponse> = await this.axiosInstance.get(
-        '/calendars/groups/slug/validate',
-        { params }
+      const response: AxiosResponse<GHLValidateGroupSlugResponse> = await this.axiosInstance.post(
+        '/calendars/groups/validate-slug',
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3311,7 +3365,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<GHLGroupSuccessResponse> = await this.axiosInstance.put(
         `/calendars/groups/${groupId}`,
-        updateData
+        updateData,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3327,7 +3382,8 @@ export class GHLApiClient {
   async deleteCalendarGroup(groupId: string): Promise<GHLApiResponse<GHLGroupSuccessResponse>> {
     try {
       const response: AxiosResponse<GHLGroupSuccessResponse> = await this.axiosInstance.delete(
-        `/calendars/groups/${groupId}`
+        `/calendars/groups/${groupId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3338,15 +3394,16 @@ export class GHLApiClient {
 
   /**
    * Disable calendar group
-   * POST /calendars/groups/{groupId}/status
+   * PUT /calendars/groups/{groupId}/status
    */
   async disableCalendarGroup(groupId: string, isActive: boolean): Promise<GHLApiResponse<GHLGroupSuccessResponse>> {
     try {
       const payload: GHLGroupStatusUpdateRequest = { isActive };
 
-      const response: AxiosResponse<GHLGroupSuccessResponse> = await this.axiosInstance.post(
+      const response: AxiosResponse<GHLGroupSuccessResponse> = await this.axiosInstance.put(
         `/calendars/groups/${groupId}/status`,
-        payload
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3359,15 +3416,15 @@ export class GHLApiClient {
 
   /**
    * Get appointment notes
-   * GET /calendars/events/appointments/{appointmentId}/notes
+   * GET /calendars/appointments/{appointmentId}/notes
    */
   async getAppointmentNotes(appointmentId: string, limit = 10, offset = 0): Promise<GHLApiResponse<GHLGetAppointmentNotesResponse>> {
     try {
       const params = { limit, offset };
 
       const response: AxiosResponse<GHLGetAppointmentNotesResponse> = await this.axiosInstance.get(
-        `/calendars/events/appointments/${appointmentId}/notes`,
-        { params }
+        `/calendars/appointments/${appointmentId}/notes`,
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3378,13 +3435,14 @@ export class GHLApiClient {
 
   /**
    * Create appointment note
-   * POST /calendars/events/appointments/{appointmentId}/notes
+   * POST /calendars/appointments/{appointmentId}/notes
    */
   async createAppointmentNote(appointmentId: string, noteData: GHLCreateAppointmentNoteRequest): Promise<GHLApiResponse<GHLAppointmentNoteResponse>> {
     try {
       const response: AxiosResponse<GHLAppointmentNoteResponse> = await this.axiosInstance.post(
-        `/calendars/events/appointments/${appointmentId}/notes`,
-        noteData
+        `/calendars/appointments/${appointmentId}/notes`,
+        noteData,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3395,13 +3453,14 @@ export class GHLApiClient {
 
   /**
    * Update appointment note
-   * PUT /calendars/events/appointments/{appointmentId}/notes/{noteId}
+   * PUT /calendars/appointments/{appointmentId}/notes/{noteId}
    */
   async updateAppointmentNote(appointmentId: string, noteId: string, updateData: GHLUpdateAppointmentNoteRequest): Promise<GHLApiResponse<GHLAppointmentNoteResponse>> {
     try {
       const response: AxiosResponse<GHLAppointmentNoteResponse> = await this.axiosInstance.put(
-        `/calendars/events/appointments/${appointmentId}/notes/${noteId}`,
-        updateData
+        `/calendars/appointments/${appointmentId}/notes/${noteId}`,
+        updateData,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3412,12 +3471,13 @@ export class GHLApiClient {
 
   /**
    * Delete appointment note
-   * DELETE /calendars/events/appointments/{appointmentId}/notes/{noteId}
+   * DELETE /calendars/appointments/{appointmentId}/notes/{noteId}
    */
   async deleteAppointmentNote(appointmentId: string, noteId: string): Promise<GHLApiResponse<GHLDeleteAppointmentNoteResponse>> {
     try {
       const response: AxiosResponse<GHLDeleteAppointmentNoteResponse> = await this.axiosInstance.delete(
-        `/calendars/events/appointments/${appointmentId}/notes/${noteId}`
+        `/calendars/appointments/${appointmentId}/notes/${noteId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3442,7 +3502,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLCalendarResource[]> = await this.axiosInstance.get(
         `/calendars/resources/${resourceType}`,
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3464,7 +3524,8 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLCalendarResourceResponse> = await this.axiosInstance.post(
         `/calendars/resources/${resourceType}`,
-        payload
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3480,7 +3541,8 @@ export class GHLApiClient {
   async getCalendarResource(resourceType: 'equipments' | 'rooms', resourceId: string): Promise<GHLApiResponse<GHLCalendarResourceByIdResponse>> {
     try {
       const response: AxiosResponse<GHLCalendarResourceByIdResponse> = await this.axiosInstance.get(
-        `/calendars/resources/${resourceType}/${resourceId}`
+        `/calendars/resources/${resourceType}/${resourceId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3497,7 +3559,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<GHLCalendarResourceResponse> = await this.axiosInstance.put(
         `/calendars/resources/${resourceType}/${resourceId}`,
-        updateData
+        updateData,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3513,7 +3576,8 @@ export class GHLApiClient {
   async deleteCalendarResource(resourceType: 'equipments' | 'rooms', resourceId: string): Promise<GHLApiResponse<GHLResourceDeleteResponse>> {
     try {
       const response: AxiosResponse<GHLResourceDeleteResponse> = await this.axiosInstance.delete(
-        `/calendars/resources/${resourceType}/${resourceId}`
+        `/calendars/resources/${resourceType}/${resourceId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3536,7 +3600,7 @@ export class GHLApiClient {
 
       const response: AxiosResponse<GHLCalendarNotification[]> = await this.axiosInstance.get(
         `/calendars/${calendarId}/notifications`,
-        { params }
+        { params, headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3551,11 +3615,10 @@ export class GHLApiClient {
    */
   async createCalendarNotifications(calendarId: string, notifications: GHLCreateCalendarNotificationRequest[]): Promise<GHLApiResponse<GHLCalendarNotification[]>> {
     try {
-      const payload = { notifications };
-
       const response: AxiosResponse<GHLCalendarNotification[]> = await this.axiosInstance.post(
         `/calendars/${calendarId}/notifications`,
-        payload
+        notifications,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3571,7 +3634,8 @@ export class GHLApiClient {
   async getCalendarNotification(calendarId: string, notificationId: string): Promise<GHLApiResponse<GHLCalendarNotification>> {
     try {
       const response: AxiosResponse<GHLCalendarNotification> = await this.axiosInstance.get(
-        `/calendars/${calendarId}/notifications/${notificationId}`
+        `/calendars/${calendarId}/notifications/${notificationId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3588,7 +3652,8 @@ export class GHLApiClient {
     try {
       const response: AxiosResponse<GHLCalendarNotification> = await this.axiosInstance.put(
         `/calendars/${calendarId}/notifications/${notificationId}`,
-        updateData
+        updateData,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3604,7 +3669,8 @@ export class GHLApiClient {
   async deleteCalendarNotification(calendarId: string, notificationId: string): Promise<GHLApiResponse<GHLCalendarNotificationDeleteResponse>> {
     try {
       const response: AxiosResponse<GHLCalendarNotificationDeleteResponse> = await this.axiosInstance.delete(
-        `/calendars/${calendarId}/notifications/${notificationId}`
+        `/calendars/${calendarId}/notifications/${notificationId}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3629,7 +3695,8 @@ export class GHLApiClient {
       });
 
       const response: AxiosResponse<GHLGetCalendarEventsResponse> = await this.axiosInstance.get(
-        `/calendars/blocked-slots?${params}`
+        `/calendars/blocked-slots?${params}`,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -3640,7 +3707,7 @@ export class GHLApiClient {
 
   /**
    * Create a new block slot
-   * POST /calendars/blocked-slots
+   * POST /calendars/events/block-slots
    */
   async createBlockSlot(blockSlotData: GHLCreateBlockSlotRequest): Promise<GHLApiResponse<GHLBlockSlotResponse>> {
     try {
@@ -3650,8 +3717,9 @@ export class GHLApiClient {
       };
 
       const response: AxiosResponse<GHLBlockSlotResponse> = await this.axiosInstance.post(
-        '/calendars/blocked-slots',
-        payload
+        '/calendars/events/block-slots',
+        payload,
+        { headers: this.getCalendarHeaders() }
       );
 
       return this.wrapResponse(response.data);
@@ -4373,8 +4441,9 @@ export class GHLApiClient {
   async getSurveySubmissions(request: GHLGetSurveySubmissionsRequest): Promise<GHLApiResponse<GHLGetSurveySubmissionsResponse>> {
     try {
       const locationId = request.locationId || this.config.locationId;
-      
+
       const params = new URLSearchParams();
+      params.append('locationId', locationId);
       if (request.page) params.append('page', request.page.toString());
       if (request.limit) params.append('limit', request.limit.toString());
       if (request.surveyId) params.append('surveyId', request.surveyId);
@@ -4383,7 +4452,7 @@ export class GHLApiClient {
       if (request.endAt) params.append('endAt', request.endAt);
 
       const response: AxiosResponse<GHLGetSurveySubmissionsResponse> = await this.axiosInstance.get(
-        `/locations/${locationId}/surveys/submissions?${params.toString()}`
+        `/surveys/submissions?${params.toString()}`
       );
 
       return this.wrapResponse(response.data);

@@ -58,7 +58,7 @@ export class SocialMediaTools {
               description: 'Type of post to search for'
             }
           },
-          required: ['fromDate', 'toDate']
+          required: []
         }
       },
       {
@@ -88,7 +88,7 @@ export class SocialMediaTools {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'scheduled', 'published'],
+              enum: ['draft', 'scheduled', 'published', 'in_progress', 'failed', 'in_review'],
               description: 'Post status',
               default: 'draft'
             },
@@ -131,10 +131,19 @@ export class SocialMediaTools {
             summary: { type: 'string', description: 'Updated post content' },
             status: {
               type: 'string',
-              enum: ['draft', 'scheduled', 'published'],
+              enum: ['draft', 'scheduled', 'published', 'in_progress', 'failed', 'in_review'],
               description: 'Updated post status'
             },
             scheduleDate: { type: 'string', description: 'Updated schedule date' },
+            accountIds: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Social account IDs'
+            },
+            media: {
+              type: 'array',
+              description: 'Media items'
+            },
             tags: {
               type: 'array',
               items: { type: 'string' },

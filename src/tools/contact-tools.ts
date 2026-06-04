@@ -75,12 +75,25 @@ export class ContactTools {
           properties: {
             firstName: { type: 'string', description: 'Contact first name' },
             lastName: { type: 'string', description: 'Contact last name' },
+            name: { type: 'string', description: 'Contact full name' },
             email: { type: 'string', description: 'Contact email address' },
             phone: { type: 'string', description: 'Contact phone number' },
+            address1: { type: 'string', description: 'Contact street address' },
+            city: { type: 'string', description: 'Contact city' },
+            state: { type: 'string', description: 'Contact state' },
+            postalCode: { type: 'string', description: 'Contact postal code' },
+            country: { type: 'string', description: 'Contact country' },
+            companyName: { type: 'string', description: 'Contact company name' },
+            website: { type: 'string', description: 'Contact website' },
+            timezone: { type: 'string', description: 'Contact timezone' },
+            dateOfBirth: { type: 'string', description: 'Contact date of birth' },
+            assignedTo: { type: 'string', description: 'User ID to assign contact to' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Tags to assign to contact' },
-            source: { type: 'string', description: 'Source of the contact' }
+            source: { type: 'string', description: 'Source of the contact' },
+            customFields: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, field_value: { type: 'string' } }, required: ['id', 'field_value'] }, description: 'Custom field values' },
+            dnd: { type: 'boolean', description: 'Do Not Disturb flag' }
           },
-          required: ['email']
+          required: ['firstName']
         }
       },
       {
@@ -118,7 +131,20 @@ export class ContactTools {
             lastName: { type: 'string', description: 'Contact last name' },
             email: { type: 'string', description: 'Contact email address' },
             phone: { type: 'string', description: 'Contact phone number' },
-            tags: { type: 'array', items: { type: 'string' }, description: 'Tags to assign to contact' }
+            address1: { type: 'string', description: 'Contact street address' },
+            city: { type: 'string', description: 'Contact city' },
+            state: { type: 'string', description: 'Contact state' },
+            postalCode: { type: 'string', description: 'Contact postal code' },
+            country: { type: 'string', description: 'Contact country' },
+            companyName: { type: 'string', description: 'Contact company name' },
+            website: { type: 'string', description: 'Contact website' },
+            timezone: { type: 'string', description: 'Contact timezone' },
+            dateOfBirth: { type: 'string', description: 'Contact date of birth' },
+            assignedTo: { type: 'string', description: 'User ID to assign contact to' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Tags to assign to contact' },
+            source: { type: 'string', description: 'Source of the contact' },
+            customFields: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, field_value: { type: 'string' } }, required: ['id', 'field_value'] }, description: 'Custom field values' },
+            dnd: { type: 'boolean', description: 'Do Not Disturb flag' }
           },
           required: ['contactId']
         }
@@ -262,7 +288,10 @@ export class ContactTools {
           properties: {
             contactId: { type: 'string', description: 'Contact ID' },
             body: { type: 'string', description: 'Note content' },
-            userId: { type: 'string', description: 'User ID creating the note' }
+            userId: { type: 'string', description: 'User ID creating the note' },
+            title: { type: 'string', description: 'Note title' },
+            color: { type: 'string', description: 'Note color' },
+            pinned: { type: 'boolean', description: 'Whether the note is pinned' }
           },
           required: ['contactId', 'body']
         }
@@ -288,7 +317,10 @@ export class ContactTools {
             contactId: { type: 'string', description: 'Contact ID' },
             noteId: { type: 'string', description: 'Note ID' },
             body: { type: 'string', description: 'Note content' },
-            userId: { type: 'string', description: 'User ID updating the note' }
+            userId: { type: 'string', description: 'User ID updating the note' },
+            title: { type: 'string', description: 'Note title' },
+            color: { type: 'string', description: 'Note color' },
+            pinned: { type: 'boolean', description: 'Whether the note is pinned' }
           },
           required: ['contactId', 'noteId', 'body']
         }
@@ -315,11 +347,23 @@ export class ContactTools {
           properties: {
             firstName: { type: 'string', description: 'Contact first name' },
             lastName: { type: 'string', description: 'Contact last name' },
+            name: { type: 'string', description: 'Contact full name' },
             email: { type: 'string', description: 'Contact email address' },
             phone: { type: 'string', description: 'Contact phone number' },
+            address1: { type: 'string', description: 'Contact address' },
+            city: { type: 'string', description: 'Contact city' },
+            state: { type: 'string', description: 'Contact state' },
+            postalCode: { type: 'string', description: 'Contact postal code' },
+            country: { type: 'string', description: 'Contact country' },
+            companyName: { type: 'string', description: 'Contact company name' },
+            website: { type: 'string', description: 'Contact website' },
+            timezone: { type: 'string', description: 'Contact timezone' },
+            dateOfBirth: { type: 'string', description: 'Contact date of birth' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Tags to assign to contact' },
             source: { type: 'string', description: 'Source of the contact' },
-            assignedTo: { type: 'string', description: 'User ID to assign contact to' }
+            assignedTo: { type: 'string', description: 'User ID to assign contact to' },
+            customFields: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, field_value: { type: 'string' } }, required: ['id', 'field_value'] }, description: 'Custom field values' },
+            dnd: { type: 'boolean', description: 'Do Not Disturb flag' }
           }
         }
       },
@@ -582,10 +626,23 @@ export class ContactTools {
         locationId: this.ghlClient.getConfig().locationId,
         firstName: params.firstName,
         lastName: params.lastName,
+        name: params.name,
         email: params.email,
         phone: params.phone,
+        address1: params.address1,
+        city: params.city,
+        state: params.state,
+        postalCode: params.postalCode,
+        country: params.country,
+        companyName: params.companyName,
+        website: params.website,
+        timezone: params.timezone,
+        dateOfBirth: params.dateOfBirth,
+        assignedTo: params.assignedTo,
         tags: params.tags,
-      source: params.source
+        source: params.source,
+        customFields: params.customFields,
+        dnd: params.dnd
     });
 
     if (!response.success) {
@@ -629,7 +686,20 @@ export class ContactTools {
       lastName: params.lastName,
       email: params.email,
       phone: params.phone,
-      tags: params.tags
+      address1: params.address1,
+      city: params.city,
+      state: params.state,
+      postalCode: params.postalCode,
+      country: params.country,
+      companyName: params.companyName,
+      website: params.website,
+      timezone: params.timezone,
+      dateOfBirth: params.dateOfBirth,
+      assignedTo: params.assignedTo,
+      tags: params.tags,
+      source: params.source,
+      customFields: params.customFields,
+      dnd: params.dnd
     });
 
     if (!response.success) {
@@ -756,7 +826,10 @@ export class ContactTools {
   private async createContactNote(params: MCPCreateContactNoteParams): Promise<GHLNote> {
     const response = await this.ghlClient.createContactNote(params.contactId, {
       body: params.body,
-      userId: params.userId
+      userId: params.userId,
+      title: params.title,
+      color: params.color,
+      pinned: params.pinned
     });
 
     if (!response.success) {
@@ -779,7 +852,10 @@ export class ContactTools {
   private async updateContactNote(params: MCPUpdateContactNoteParams): Promise<GHLNote> {
     const response = await this.ghlClient.updateContactNote(params.contactId, params.noteId, {
       body: params.body,
-      userId: params.userId
+      userId: params.userId,
+      title: params.title,
+      color: params.color,
+      pinned: params.pinned
     });
 
     if (!response.success) {
@@ -819,7 +895,9 @@ export class ContactTools {
       tags: params.tags,
       customFields: params.customFields,
       source: params.source,
-      assignedTo: params.assignedTo
+      assignedTo: params.assignedTo,
+      dateOfBirth: params.dateOfBirth,
+      dnd: params.dnd
     });
 
     if (!response.success) {

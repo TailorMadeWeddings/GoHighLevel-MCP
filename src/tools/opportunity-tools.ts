@@ -67,6 +67,30 @@ export class OpportunityTools {
               minimum: 1,
               maximum: 100,
               default: 20
+            },
+            page: {
+              type: 'number',
+              description: 'Page number for pagination'
+            },
+            order: {
+              type: 'string',
+              description: 'Sort order'
+            },
+            startAfter: {
+              type: 'string',
+              description: 'Start after cursor for pagination'
+            },
+            startAfterId: {
+              type: 'string',
+              description: 'Start after ID for pagination'
+            },
+            date: {
+              type: 'string',
+              description: 'Filter by date'
+            },
+            country: {
+              type: 'string',
+              description: 'Filter by country'
             }
           }
         }
@@ -124,6 +148,21 @@ export class OpportunityTools {
             assignedTo: {
               type: 'string',
               description: 'User ID to assign this opportunity to'
+            },
+            pipelineStageId: {
+              type: 'string',
+              description: 'Pipeline stage ID'
+            },
+            customFields: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  field_value: { type: 'string' }
+                }
+              },
+              description: 'Custom field values'
             }
           },
           required: ['name', 'pipelineId', 'contactId']
@@ -143,6 +182,10 @@ export class OpportunityTools {
               type: 'string',
               description: 'New status for the opportunity',
               enum: ['open', 'won', 'lost', 'abandoned']
+            },
+            lostReasonId: {
+              type: 'string',
+              description: 'Reason ID when status is lost'
             }
           },
           required: ['opportunityId', 'status']
@@ -196,6 +239,17 @@ export class OpportunityTools {
             assignedTo: {
               type: 'string',
               description: 'Updated assigned user ID'
+            },
+            customFields: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  field_value: { type: 'string' }
+                }
+              },
+              description: 'Custom field values'
             }
           },
           required: ['opportunityId']
@@ -236,9 +290,38 @@ export class OpportunityTools {
             assignedTo: {
               type: 'string',
               description: 'User ID to assign this opportunity to'
+            },
+            customFields: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  field_value: { type: 'string' }
+                }
+              },
+              description: 'Custom field values'
+            },
+            followers: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'User IDs of followers'
+            },
+            isRemoveAllFollowers: {
+              type: 'boolean',
+              description: 'Remove all existing followers'
+            },
+            followersActionType: {
+              type: 'string',
+              description: 'Action type for followers',
+              enum: ['add', 'remove', 'replace']
+            },
+            lostReasonId: {
+              type: 'string',
+              description: 'Reason ID when status is lost'
             }
           },
-          required: ['pipelineId', 'contactId']
+          required: ['pipelineId', 'contactId', 'followers', 'isRemoveAllFollowers', 'followersActionType']
         }
       },
       {

@@ -1201,9 +1201,12 @@ These settings control your store's shipping origin and email notification prefe
             locationId: { type: 'string', description: 'GHL Location ID (optional, uses default if not provided)' },
             shippingZoneId: { type: 'string', description: 'ID of the shipping zone' },
             name: { type: 'string', description: 'Name of the shipping rate' },
+            description: { type: 'string', description: 'Description of the shipping rate' },
             currency: { type: 'string', description: 'Currency code (e.g., USD)' },
             amount: { type: 'number', description: 'Shipping rate amount' },
-            conditionType: { type: 'string', description: 'Condition type for rate calculation' }
+            conditionType: { type: 'string', description: 'Condition type for rate calculation' },
+            minCondition: { type: 'number', description: 'Minimum condition value' },
+            maxCondition: { type: 'number', description: 'Maximum condition value' }
           },
           required: ['shippingZoneId', 'name', 'currency', 'amount', 'conditionType']
         }
@@ -1241,7 +1244,14 @@ These settings control your store's shipping origin and email notification prefe
           properties: {
             locationId: { type: 'string', description: 'GHL Location ID (optional, uses default if not provided)' },
             shippingZoneId: { type: 'string', description: 'ID of the shipping zone' },
-            shippingRateId: { type: 'string', description: 'ID of the shipping rate to update' }
+            shippingRateId: { type: 'string', description: 'ID of the shipping rate to update' },
+            name: { type: 'string', description: 'Name of the shipping rate' },
+            description: { type: 'string', description: 'Description of the shipping rate' },
+            currency: { type: 'string', description: 'Currency code (e.g., USD)' },
+            amount: { type: 'number', description: 'Shipping rate amount' },
+            conditionType: { type: 'string', description: 'Condition type for rate calculation' },
+            minCondition: { type: 'number', description: 'Minimum condition value' },
+            maxCondition: { type: 'number', description: 'Maximum condition value' }
           },
           required: ['shippingZoneId', 'shippingRateId']
         }
@@ -1315,7 +1325,9 @@ These settings control your store's shipping origin and email notification prefe
           type: 'object',
           properties: {
             locationId: { type: 'string', description: 'GHL Location ID (optional, uses default if not provided)' },
-            shippingCarrierId: { type: 'string', description: 'ID of the shipping carrier to update' }
+            shippingCarrierId: { type: 'string', description: 'ID of the shipping carrier to update' },
+            name: { type: 'string', description: 'Name of the shipping carrier' },
+            callbackUrl: { type: 'string', description: 'Callback URL for carrier rate requests' }
           },
           required: ['shippingCarrierId']
         }

@@ -111,7 +111,7 @@ export class CustomFieldV2Tools {
               description: 'ID of the parent folder for organization'
             }
           },
-          required: ['dataType', 'fieldKey', 'objectKey', 'parentId']
+          required: ['locationId', 'dataType', 'fieldKey', 'objectKey', 'parentId', 'showInForms']
         }
       },
       {
@@ -176,7 +176,7 @@ export class CustomFieldV2Tools {
               description: 'Updated maximum file limit for uploads'
             }
           },
-          required: ['id']
+          required: ['id', 'locationId', 'showInForms']
         }
       },
       {
@@ -231,7 +231,7 @@ export class CustomFieldV2Tools {
               description: 'GoHighLevel location ID (will use default if not provided)'
             }
           },
-          required: ['objectKey', 'name']
+          required: ['objectKey', 'name', 'locationId']
         }
       },
       {
@@ -253,7 +253,7 @@ export class CustomFieldV2Tools {
               description: 'GoHighLevel location ID (will use default if not provided)'
             }
           },
-          required: ['id', 'name']
+          required: ['id', 'name', 'locationId']
         }
       },
       {
@@ -271,7 +271,7 @@ export class CustomFieldV2Tools {
               description: 'GoHighLevel location ID (will use default if not provided)'
             }
           },
-          required: ['id']
+          required: ['id', 'locationId']
         }
       }
     ];

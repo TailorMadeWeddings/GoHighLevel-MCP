@@ -295,6 +295,10 @@ export class ConversationTools {
         inputSchema: {
           type: 'object',
           properties: {
+            contactId: {
+              type: 'string',
+              description: 'The unique ID of the contact for this upload'
+            },
             conversationId: {
               type: 'string',
               description: 'The conversation ID to upload attachments for'
@@ -305,7 +309,7 @@ export class ConversationTools {
               description: 'Array of file URLs to upload as attachments'
             }
           },
-          required: ['conversationId', 'attachmentUrls']
+          required: ['contactId', 'conversationId', 'attachmentUrls']
         }
       },
       {
@@ -357,6 +361,10 @@ export class ConversationTools {
               type: 'string',
               enum: ['SMS', 'Email', 'WhatsApp', 'GMB', 'IG', 'FB', 'Custom', 'WebChat', 'Live_Chat', 'Call'],
               description: 'Type of inbound message to add'
+            },
+            contactId: {
+              type: 'string',
+              description: 'The unique ID of the contact for this message'
             },
             conversationId: {
               type: 'string',
@@ -427,7 +435,7 @@ export class ConversationTools {
               }
             }
           },
-          required: ['type', 'conversationId', 'conversationProviderId']
+          required: ['type', 'contactId', 'conversationId', 'conversationProviderId']
         }
       },
       {
@@ -891,6 +899,7 @@ export class ConversationTools {
   private async uploadMessageAttachments(params: MCPUploadMessageAttachmentsParams): Promise<{ success: boolean; uploadedFiles: any; message: string }> {
     try {
       const uploadData = {
+        contactId: params.contactId,
         conversationId: params.conversationId,
         locationId: this.ghlClient.getConfig().locationId,
         attachmentUrls: params.attachmentUrls
@@ -933,6 +942,7 @@ export class ConversationTools {
     try {
       const messageData = {
         type: params.type as 'SMS' | 'Email' | 'WhatsApp' | 'GMB' | 'IG' | 'FB' | 'Custom' | 'WebChat' | 'Live_Chat' | 'Call',
+        contactId: params.contactId,
         conversationId: params.conversationId,
         conversationProviderId: params.conversationProviderId,
         message: params.message,

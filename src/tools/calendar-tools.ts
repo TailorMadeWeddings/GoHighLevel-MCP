@@ -266,6 +266,11 @@ export class CalendarTools {
             userId: {
               type: 'string',
               description: 'Specific user ID to check availability for'
+            },
+            userIds: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'User IDs for multi-user availability'
             }
           },
           required: ['calendarId', 'startDate', 'endDate']
@@ -314,7 +319,7 @@ export class CalendarTools {
             meetingLocationType: {
               type: 'string',
               description: 'Type of meeting location',
-              enum: ['custom', 'zoom', 'gmeet', 'phone', 'address'],
+              enum: ['custom', 'zoom', 'gmeet', 'phone', 'address', 'ms_teams', 'google'],
               default: 'custom'
             },
             ignoreDateRange: {
@@ -326,6 +331,14 @@ export class CalendarTools {
               type: 'boolean',
               description: 'Send notifications for this appointment',
               default: true
+            },
+            description: {
+              type: 'string',
+              description: 'Description of the appointment'
+            },
+            rrule: {
+              type: 'string',
+              description: 'Recurrence rule'
             }
           },
           required: ['calendarId', 'contactId', 'startTime']
@@ -359,10 +372,18 @@ export class CalendarTools {
               type: 'string',
               description: 'Updated title/subject of the appointment'
             },
+            calendarId: {
+              type: 'string',
+              description: 'Calendar ID for the appointment'
+            },
+            description: {
+              type: 'string',
+              description: 'Updated description of the appointment'
+            },
             appointmentStatus: {
               type: 'string',
               description: 'Updated status of the appointment',
-              enum: ['new', 'confirmed', 'cancelled', 'showed', 'noshow']
+              enum: ['new', 'confirmed', 'cancelled', 'showed', 'noshow', 'invalid']
             },
             assignedUserId: {
               type: 'string',
@@ -371,6 +392,15 @@ export class CalendarTools {
             address: {
               type: 'string',
               description: 'Updated meeting location or address'
+            },
+            meetingLocationType: {
+              type: 'string',
+              description: 'Type of meeting location',
+              enum: ['custom', 'zoom', 'gmeet', 'phone', 'address', 'ms_teams', 'google']
+            },
+            meetingLocationId: {
+              type: 'string',
+              description: 'Meeting location ID'
             },
             startTime: {
               type: 'string',
@@ -384,6 +414,10 @@ export class CalendarTools {
               type: 'boolean',
               description: 'Send notifications for this update',
               default: true
+            },
+            rrule: {
+              type: 'string',
+              description: 'Recurrence rule'
             }
           },
           required: ['appointmentId']
@@ -409,6 +443,14 @@ export class CalendarTools {
         inputSchema: {
           type: 'object',
           properties: {
+            calendarId: {
+              type: 'string',
+              description: 'Calendar ID to block'
+            },
+            locationId: {
+              type: 'string',
+              description: 'Location ID'
+            },
             startTime: {
               type: 'string',
               description: 'Start time of the block in ISO format (e.g., "2024-01-15T10:00:00-05:00")'
@@ -421,16 +463,12 @@ export class CalendarTools {
               type: 'string',
               description: 'Title/reason for the block (e.g., "Lunch Break", "Meeting")'
             },
-            calendarId: {
-              type: 'string',
-              description: 'Specific calendar to block (optional, blocks all if not specified)'
-            },
             assignedUserId: {
               type: 'string',
               description: 'User ID to apply the block for'
             }
           },
-          required: ['startTime', 'endTime']
+          required: ['calendarId', 'locationId']
         }
       },
       {
@@ -1285,11 +1323,11 @@ export class CalendarTools {
   private async createBlockSlot(params: MCPCreateBlockSlotParams): Promise<{ success: boolean; blockSlot: GHLBlockSlotResponse; message: string }> {
     try {
       const blockSlotData = {
-        locationId: this.ghlClient.getConfig().locationId,
+        locationId: params.locationId || this.ghlClient.getConfig().locationId,
+        calendarId: params.calendarId,
         startTime: params.startTime,
         endTime: params.endTime,
         title: params.title,
-        calendarId: params.calendarId,
         assignedUserId: params.assignedUserId
       };
 

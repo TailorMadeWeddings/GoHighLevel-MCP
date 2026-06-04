@@ -91,7 +91,7 @@ export class ObjectTools {
               required: ['key', 'name', 'dataType']
             }
           },
-          required: ['labels', 'key', 'primaryDisplayPropertyDetails']
+          required: ['labels', 'key', 'primaryDisplayPropertyDetails', 'locationId']
         }
       },
       {
@@ -149,7 +149,7 @@ export class ObjectTools {
               items: { type: 'string' }
             }
           },
-          required: ['key', 'searchableProperties']
+          required: ['key', 'searchableProperties', 'locationId']
         }
       },
       {

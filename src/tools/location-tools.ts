@@ -398,7 +398,7 @@ export class LocationTools {
       },
       {
         name: 'create_location_custom_field',
-        description: 'Create a new custom field for a location',
+        description: 'Create a new custom field for a location. Supports dropdown/options fields via textBoxListOptions.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -412,7 +412,7 @@ export class LocationTools {
             },
             dataType: {
               type: 'string',
-              description: 'Data type of the field (TEXT, NUMBER, DATE, etc.)'
+              description: 'Data type of the field: TEXT, LARGE_TEXT, NUMERICAL, PHONE, MONETORY, CHECKBOX, SINGLE_OPTIONS, MULTIPLE_OPTIONS, DATE, TEXTBOX_LIST, FILE_UPLOAD, RADIO'
             },
             placeholder: {
               type: 'string',
@@ -428,6 +428,24 @@ export class LocationTools {
               type: 'number',
               description: 'Position/order of the field (default: 0)',
               default: 0
+            },
+            textBoxListOptions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: {
+                    type: 'string',
+                    description: 'Display label for the option'
+                  },
+                  prefillValue: {
+                    type: 'string',
+                    description: 'Prefill value for the option (can be empty string)'
+                  }
+                },
+                required: ['label']
+              },
+              description: 'Options for dropdown/list fields. Required for SINGLE_OPTIONS, MULTIPLE_OPTIONS, CHECKBOX, TEXTBOX_LIST, RADIO data types.'
             }
           },
           required: ['locationId', 'name', 'dataType']
@@ -476,6 +494,42 @@ export class LocationTools {
             position: {
               type: 'number',
               description: 'Updated position/order'
+            },
+            textBoxListOptions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: {
+                    type: 'string',
+                    description: 'Display label for the option'
+                  },
+                  prefillValue: {
+                    type: 'string',
+                    description: 'Prefill value for the option (can be empty string)'
+                  }
+                },
+                required: ['label']
+              },
+              description: 'Options for dropdown/list fields. Required for SINGLE_OPTIONS, MULTIPLE_OPTIONS, CHECKBOX, TEXTBOX_LIST, RADIO data types.'
+            },
+            model: {
+              type: 'string',
+              enum: ['contact', 'opportunity'],
+              description: 'Model the field belongs to'
+            },
+            acceptedFormat: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Accepted file formats for FILE_UPLOAD type'
+            },
+            isMultipleFile: {
+              type: 'boolean',
+              description: 'Whether multiple files can be uploaded'
+            },
+            maxNumberOfFiles: {
+              type: 'number',
+              description: 'Maximum number of files allowed'
             }
           },
           required: ['locationId', 'customFieldId', 'name']

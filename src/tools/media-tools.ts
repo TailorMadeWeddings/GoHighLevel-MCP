@@ -67,22 +67,22 @@ export class MediaTools {
               type: 'string', 
               description: 'Search query text to filter files by name'
             },
-            altType: { 
-              type: 'string', 
-              description: 'Context type (location or agency)',
-              enum: ['location', 'agency'],
+            altType: {
+              type: 'string',
+              description: 'Context type (location)',
+              enum: ['location'],
               default: 'location'
             },
-            altId: { 
-              type: 'string', 
+            altId: {
+              type: 'string',
               description: 'Location or Agency ID (uses default location if not provided)'
             },
-            parentId: { 
-              type: 'string', 
+            parentId: {
+              type: 'string',
               description: 'Parent folder ID to list files within a specific folder'
             }
           },
-          required: []
+          required: ['type']
         }
       },
       {
@@ -132,14 +132,14 @@ export class MediaTools {
         inputSchema: {
           type: 'object',
           properties: {
-            id: { 
-              type: 'string', 
+            id: {
+              type: 'string',
               description: 'ID of the file or folder to delete'
             },
-            altType: { 
-              type: 'string', 
-              description: 'Context type (location or agency)',
-              enum: ['location', 'agency'],
+            altType: {
+              type: 'string',
+              description: 'Context type (location)',
+              enum: ['location'],
               default: 'location'
             },
             altId: { 

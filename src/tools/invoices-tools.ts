@@ -97,6 +97,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             limit: { type: 'string', description: 'Number of results per page', default: '10' },
             offset: { type: 'string', description: 'Offset for pagination', default: '0' },
             status: { type: 'string', description: 'Filter by status' },
@@ -113,7 +114,8 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             templateId: { type: 'string', description: 'Template ID' },
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           },
           required: ['templateId']
         }
@@ -126,6 +128,7 @@ export class InvoicesTools {
           properties: {
             templateId: { type: 'string', description: 'Template ID' },
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             name: { type: 'string', description: 'Template name' },
             title: { type: 'string', description: 'Invoice title' },
             currency: { type: 'string', description: 'Currency code' }
@@ -140,7 +143,8 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             templateId: { type: 'string', description: 'Template ID' },
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           },
           required: ['templateId']
         }
@@ -154,6 +158,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             name: { type: 'string', description: 'Schedule name' },
             templateId: { type: 'string', description: 'Template ID' },
             contactId: { type: 'string', description: 'Contact ID' },
@@ -169,6 +174,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             limit: { type: 'string', description: 'Number of results per page', default: '10' },
             offset: { type: 'string', description: 'Offset for pagination', default: '0' },
             status: { type: 'string', description: 'Filter by status' },
@@ -184,7 +190,8 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             scheduleId: { type: 'string', description: 'Schedule ID' },
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           },
           required: ['scheduleId']
         }
@@ -198,6 +205,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             contactId: { type: 'string', description: 'Contact ID' },
             title: { type: 'string', description: 'Invoice title' },
             currency: { type: 'string', description: 'Currency code' },
@@ -215,6 +223,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             limit: { type: 'string', description: 'Number of results per page', default: '10' },
             offset: { type: 'string', description: 'Offset for pagination', default: '0' },
             status: { type: 'string', description: 'Filter by status' },
@@ -231,7 +240,8 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             invoiceId: { type: 'string', description: 'Invoice ID' },
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           },
           required: ['invoiceId']
         }
@@ -244,6 +254,7 @@ export class InvoicesTools {
           properties: {
             invoiceId: { type: 'string', description: 'Invoice ID' },
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             emailTo: { type: 'string', description: 'Email address to send to' },
             subject: { type: 'string', description: 'Email subject' },
             message: { type: 'string', description: 'Email message' }
@@ -260,6 +271,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             contactId: { type: 'string', description: 'Contact ID' },
             title: { type: 'string', description: 'Estimate title' },
             currency: { type: 'string', description: 'Currency code' },
@@ -276,6 +288,7 @@ export class InvoicesTools {
           type: 'object',
           properties: {
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             limit: { type: 'string', description: 'Number of results per page', default: '10' },
             offset: { type: 'string', description: 'Offset for pagination', default: '0' },
             status: { type: 'string', enum: ['all', 'draft', 'sent', 'accepted', 'declined', 'invoiced', 'viewed'], description: 'Filter by status' },
@@ -293,6 +306,7 @@ export class InvoicesTools {
           properties: {
             estimateId: { type: 'string', description: 'Estimate ID' },
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             emailTo: { type: 'string', description: 'Email address to send to' },
             subject: { type: 'string', description: 'Email subject' },
             message: { type: 'string', description: 'Email message' }
@@ -308,6 +322,7 @@ export class InvoicesTools {
           properties: {
             estimateId: { type: 'string', description: 'Estimate ID' },
             altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' },
             issueDate: { type: 'string', description: 'Invoice issue date' },
             dueDate: { type: 'string', description: 'Invoice due date' }
           },
@@ -322,7 +337,8 @@ export class InvoicesTools {
         inputSchema: {
           type: 'object',
           properties: {
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           }
         }
       },
@@ -332,7 +348,8 @@ export class InvoicesTools {
         inputSchema: {
           type: 'object',
           properties: {
-            altId: { type: 'string', description: 'Location ID' }
+            altId: { type: 'string', description: 'Location ID' },
+            altType: { type: 'string', description: 'Alt type (usually "location")', default: 'location' }
           }
         }
       }

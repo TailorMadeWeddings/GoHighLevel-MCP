@@ -57,15 +57,19 @@ export class AssociationTools {
               description: 'Unique key for the association (e.g., "student_teacher")'
             },
             firstObjectLabel: {
+              type: 'string',
               description: 'Label for the first object in the association (e.g., "student")'
             },
             firstObjectKey: {
+              type: 'string',
               description: 'Key for the first object (e.g., "custom_objects.children")'
             },
             secondObjectLabel: {
+              type: 'string',
               description: 'Label for the second object in the association (e.g., "teacher")'
             },
             secondObjectKey: {
+              type: 'string',
               description: 'Key for the second object (e.g., "contact")'
             }
           },
@@ -97,9 +101,11 @@ export class AssociationTools {
               description: 'The ID of the association to update'
             },
             firstObjectLabel: {
+              type: 'string',
               description: 'New label for the first object in the association'
             },
             secondObjectLabel: {
+              type: 'string',
               description: 'New label for the second object in the association'
             }
           },

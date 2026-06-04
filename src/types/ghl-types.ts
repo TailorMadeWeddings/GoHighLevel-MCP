@@ -127,6 +127,7 @@ export interface GHLCreateContactRequest {
   dnd?: boolean;
   dndSettings?: GHLDndSettings;
   assignedTo?: string;
+  dateOfBirth?: string;
 }
 
 // Contact Tags Operations
@@ -221,6 +222,8 @@ export interface GHLMessageMeta {
 // Send Message Request
 export interface GHLSendMessageRequest {
   type: GHLSendMessageType;
+  subType?: string;
+  status?: string;
   contactId: string;
   message?: string;
   html?: string;
@@ -337,13 +340,16 @@ export interface GHLTask {
   contactId: string;
 }
 
-// Note Interface  
+// Note Interface
 export interface GHLNote {
   id?: string;
   body: string;
   userId?: string;
   contactId: string;
   dateAdded?: string;
+  title?: string;
+  color?: string;
+  pinned?: boolean;
 }
 
 // Campaign Interface
@@ -420,10 +426,23 @@ export interface GHLFollowersResponse {
 export interface MCPCreateContactParams {
   firstName?: string;
   lastName?: string;
-  email: string;
+  name?: string;
+  email?: string;
   phone?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  companyName?: string;
+  website?: string;
+  timezone?: string;
+  dateOfBirth?: string;
+  assignedTo?: string;
   tags?: string[];
   source?: string;
+  customFields?: GHLCustomField[];
+  dnd?: boolean;
 }
 
 export interface MCPSearchContactsParams {
@@ -439,7 +458,20 @@ export interface MCPUpdateContactParams {
   lastName?: string;
   email?: string;
   phone?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  companyName?: string;
+  website?: string;
+  timezone?: string;
+  dateOfBirth?: string;
+  assignedTo?: string;
   tags?: string[];
+  source?: string;
+  customFields?: GHLCustomField[];
+  dnd?: boolean;
 }
 
 export interface MCPAddContactTagsParams {
@@ -501,6 +533,9 @@ export interface MCPCreateContactNoteParams {
   contactId: string;
   body: string;
   userId?: string;
+  title?: string;
+  color?: string;
+  pinned?: boolean;
 }
 
 export interface MCPGetContactNoteParams {
@@ -513,6 +548,9 @@ export interface MCPUpdateContactNoteParams {
   noteId: string;
   body: string;
   userId?: string;
+  title?: string;
+  color?: string;
+  pinned?: boolean;
 }
 
 export interface MCPDeleteContactNoteParams {
@@ -535,10 +573,12 @@ export interface MCPUpsertContactParams {
   website?: string;
   timezone?: string;
   companyName?: string;
+  dateOfBirth?: string;
   tags?: string[];
   customFields?: GHLCustomField[];
   source?: string;
   assignedTo?: string;
+  dnd?: boolean;
 }
 
 export interface MCPGetDuplicateContactParams {
@@ -1053,6 +1093,10 @@ export interface MCPSearchOpportunitiesParams {
   endDate?: string; // mm-dd-yyyy
   limit?: number;
   page?: number;
+  order?: string;
+  startAfter?: string;
+  startAfterId?: string;
+  date?: string;
   includeTasks?: boolean;
   includeNotes?: boolean;
   includeCalendarEvents?: boolean;
@@ -1088,6 +1132,11 @@ export interface MCPUpsertOpportunityParams {
   pipelineStageId?: string;
   monetaryValue?: number;
   assignedTo?: string;
+  customFields?: GHLCustomFieldInput[];
+  followers: string[];
+  isRemoveAllFollowers: boolean;
+  followersActionType: 'add' | 'remove' | 'replace';
+  lostReasonId?: string;
 }
 
 export interface MCPAddOpportunityFollowersParams {
@@ -1325,10 +1374,10 @@ export interface GHLUpdateAppointmentRequest {
 
 // Block Slot Management
 export interface GHLCreateBlockSlotRequest {
-  calendarId?: string;
+  calendarId: string;
   locationId: string;
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
   title?: string;
   assignedUserId?: string;
 }
@@ -1398,6 +1447,7 @@ export interface MCPGetFreeSlotsParams {
   endDate: string; // YYYY-MM-DD or milliseconds
   timezone?: string;
   userId?: string;
+  userIds?: string[];
 }
 
 export interface MCPCreateAppointmentParams {
@@ -1406,29 +1456,37 @@ export interface MCPCreateAppointmentParams {
   startTime: string; // ISO format
   endTime?: string; // ISO format
   title?: string;
+  description?: string;
   appointmentStatus?: 'new' | 'confirmed';
   assignedUserId?: string;
   address?: string;
-  meetingLocationType?: 'custom' | 'zoom' | 'gmeet' | 'phone' | 'address';
+  meetingLocationType?: 'custom' | 'zoom' | 'gmeet' | 'phone' | 'address' | 'ms_teams' | 'google';
   ignoreDateRange?: boolean;
   toNotify?: boolean;
+  rrule?: string;
 }
 
 export interface MCPUpdateAppointmentParams {
   appointmentId: string;
+  calendarId?: string;
   title?: string;
-  appointmentStatus?: 'new' | 'confirmed' | 'cancelled' | 'showed' | 'noshow';
+  description?: string;
+  appointmentStatus?: 'new' | 'confirmed' | 'cancelled' | 'showed' | 'noshow' | 'invalid';
   assignedUserId?: string;
   address?: string;
+  meetingLocationType?: 'custom' | 'zoom' | 'gmeet' | 'phone' | 'address' | 'ms_teams' | 'google';
+  meetingLocationId?: string;
   startTime?: string;
   endTime?: string;
   toNotify?: boolean;
+  rrule?: string;
 }
 
 export interface MCPCreateBlockSlotParams {
-  calendarId?: string;
-  startTime: string;
-  endTime: string;
+  calendarId: string;
+  locationId: string;
+  startTime?: string;
+  endTime?: string;
   title?: string;
   assignedUserId?: string;
 }
@@ -2112,6 +2170,7 @@ export interface GHLEmailMessage {
 
 // File Upload Interfaces
 export interface GHLUploadFilesRequest {
+  contactId?: string;
   conversationId: string;
   locationId: string;
   attachmentUrls: string[];
@@ -2141,6 +2200,7 @@ export interface GHLUpdateMessageStatusRequest {
 // Inbound/Outbound Message Interfaces
 export interface GHLProcessInboundMessageRequest {
   type: 'SMS' | 'Email' | 'WhatsApp' | 'GMB' | 'IG' | 'FB' | 'Custom' | 'WebChat' | 'Live_Chat' | 'Call';
+  contactId?: string;
   attachments?: string[];
   message?: string;
   conversationId: string;
@@ -2236,6 +2296,7 @@ export interface MCPGetMessageParams {
 }
 
 export interface MCPUploadMessageAttachmentsParams {
+  contactId: string;
   conversationId: string;
   attachmentUrls: string[];
 }
@@ -2254,6 +2315,7 @@ export interface MCPUpdateMessageStatusParams {
 
 export interface MCPAddInboundMessageParams {
   type: 'SMS' | 'Email' | 'WhatsApp' | 'GMB' | 'IG' | 'FB' | 'Custom' | 'WebChat' | 'Live_Chat' | 'Call';
+  contactId: string;
   conversationId: string;
   conversationProviderId: string;
   message?: string;
