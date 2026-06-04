@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoHighLevel MCP Server - Setup Guide</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232633;
+      --border: #2e3245;
+      --text: #e1e4ed;
+      --text-muted: #8b90a0;
+      --accent: #6c8aff;
+      --accent-dim: #4a62c4;
+      --green: #4ade80;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --code-bg: #161922;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 0;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 50%, #1a2340 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 2.4em;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #6c8aff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.15em;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+
+    .toc h2 {
+      font-size: 1.1em;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .toc ol {
+      padding-left: 20px;
+    }
+
+    .toc li {
+      margin-bottom: 6px;
+    }
+
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 1.02em;
+    }
+
+    .toc a:hover {
+      text-decoration: underline;
+    }
+
+    .step {
+      margin-bottom: 52px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-number {
+      background: var(--accent);
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1em;
+      flex-shrink: 0;
+    }
+
+    .step-header h2 {
+      font-size: 1.4em;
+      font-weight: 600;
+    }
+
+    .step p, .step li {
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .step ul, .step ol {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-size: 0.92em;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      color: #c9d1d9;
+    }
+
+    p code, li code {
+      background: var(--surface2);
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+
+    .comment { color: #6a737d; }
+    .string { color: #a5d6ff; }
+    .key { color: #7ee787; }
+    .cmd { color: #d2a8ff; }
+    .flag { color: #79c0ff; }
+
+    .callout {
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .callout-icon {
+      font-size: 1.3em;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .callout-info {
+      background: rgba(108, 138, 255, 0.08);
+      border: 1px solid rgba(108, 138, 255, 0.2);
+    }
+
+    .callout-warn {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .callout-success {
+      background: rgba(74, 222, 128, 0.08);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    .callout-danger {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .tab-group {
+      margin: 20px 0;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-family: inherit;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface2);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      background: var(--surface);
+    }
+
+    .file-tree {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.9em;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    .file-tree .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.8em; }
+      pre { padding: 14px 16px; font-size: 0.85em; }
+      .container { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>GoHighLevel MCP Server</h1>
+  <p>Complete setup guide &mdash; from zero to a fully working multi-account MCP server connected to Claude.</p>
+</div>
+
+<div class="container">
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#step-1">Prerequisites</a></li>
+      <li><a href="#step-2">Get Your GHL API Keys</a></li>
+      <li><a href="#step-3">Clone and Install</a></li>
+      <li><a href="#step-4">Configure Environment</a></li>
+      <li><a href="#step-5">Build the Server</a></li>
+      <li><a href="#step-6">Connect to Claude Desktop</a></li>
+      <li><a href="#step-7">Connect to Claude Code (CLI)</a></li>
+      <li><a href="#step-8">Deploy to Railway (Remote Hosting)</a></li>
+      <li><a href="#step-9">Verify Everything Works</a></li>
+      <li><a href="#step-10">Multi-Account Usage</a></li>
+      <li><a href="#step-11">Troubleshooting</a></li>
+    </ol>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step" id="step-1">
+    <div class="step-header">
+      <div class="step-number">1</div>
+      <h2>Prerequisites</h2>
+    </div>
+    <p>Before starting, make sure you have these installed on your machine:</p>
+    <table>
+      <tr><th>Software</th><th>Minimum Version</th><th>Check Command</th></tr>
+      <tr><td><strong>Node.js</strong></td><td>18.0.0</td><td><code>node --version</code></td></tr>
+      <tr><td><strong>npm</strong></td><td>9.0.0</td><td><code>npm --version</code></td></tr>
+      <tr><td><strong>Git</strong></td><td>Any</td><td><code>git --version</code></td></tr>
+    </table>
+    <p>You also need one of the following Claude clients:</p>
+    <ul>
+      <li><strong>Claude Desktop</strong> (Mac/Windows app)</li>
+      <li><strong>Claude Code</strong> (CLI tool)</li>
+    </ul>
+    <div class="callout callout-info">
+      <span class="callout-icon">&#9432;</span>
+      <div>If you don't have Node.js, download it from <code>https://nodejs.org</code> &mdash; choose the LTS version.</div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="step-2">
+    <div class="step-header">
+      <div class="step-number">2</div>
+      <h2>Get Your GHL API Keys</h2>
+    </div>
+    <p>You need a <strong>Private Integration API Key</strong> and <strong>Location ID</strong> for each GHL sub-account you want to connect.</p>
+    <ol>
+      <li>Log into your GoHighLevel sub-account</li>
+      <li>Go to <strong>Settings &rarr; Business Profile</strong> and copy the <strong>Location ID</strong> (or find it in the URL: <code>app.gohighlevel.com/v2/location/<strong>YOUR_LOCATION_ID</strong>/...</code>)</li>
+      <li>Go to <strong>Settings &rarr; Integrations &rarr; Private Integrations</strong></li>
+      <li>Click <strong>Create Private Integration</strong></li>
+      <li>Name it (e.g., "Claude MCP")</li>
+      <li>Enable these scopes (at minimum):
+        <ul>
+          <li>Contacts (read/write)</li>
+          <li>Conversations/Messages (read/write)</li>
+          <li>Opportunities (read/write)</li>
+          <li>Calendars (read/write)</li>
+          <li>Email Templates (read/write) &mdash; labeled as <code>emails/builder.write</code></li>
+          <li>Locations / Custom Fields (read/write)</li>
+          <li>Any other scopes for features you plan to use</li>
+        </ul>
+      </li>
+      <li>Click <strong>Save</strong> and copy the API Key (starts with <code>pit-</code>)</li>
+    </ol>
+    <div class="callout callout-warn">
+      <span class="callout-icon">&#9888;</span>
+      <div><strong>Repeat for each sub-account</strong> you want to connect. Each sub-account needs its own Private Integration API key and Location ID.</div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="step-3">
+    <div class="step-header">
+      <div class="step-number">3</div>
+      <h2>Clone and Install</h2>
+    </div>
+    <p>Open your terminal and run:</p>
+    <pre><code><span class="comment"># Clone the repository</span>
+<span class="cmd">git clone</span> https://github.com/mastanley13/GoHighLevel-MCP.git
+<span class="cmd">cd</span> GoHighLevel-MCP
+
+<span class="comment"># Install dependencies</span>
+<span class="cmd">npm install</span></code></pre>
+    <p>You should see a successful install with no errors. The project structure looks like this:</p>
+    <div class="file-tree">
+      GoHighLevel-MCP/<br>
+      &ensp;&ensp;src/<br>
+      &ensp;&ensp;&ensp;&ensp;clients/ &ensp;&ensp;&ensp;<span style="color:#6a737d">-- GHL API client</span><br>
+      &ensp;&ensp;&ensp;&ensp;tools/ &ensp;&ensp;&ensp;&ensp;<span style="color:#6a737d">-- 270+ tool definitions</span><br>
+      &ensp;&ensp;&ensp;&ensp;types/ &ensp;&ensp;&ensp;&ensp;<span style="color:#6a737d">-- TypeScript interfaces</span><br>
+      &ensp;&ensp;&ensp;&ensp;<span class="highlight">server.ts</span> &ensp;&ensp;<span style="color:#6a737d">-- Stdio server (Claude Desktop/Code)</span><br>
+      &ensp;&ensp;&ensp;&ensp;<span class="highlight">http-server.ts</span> <span style="color:#6a737d">-- HTTP server (hosted deployment)</span><br>
+      &ensp;&ensp;<span class="highlight">.env</span> &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span style="color:#6a737d">-- Your API keys go here</span><br>
+      &ensp;&ensp;package.json<br>
+      &ensp;&ensp;tsconfig.json
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="step-4">
+    <div class="step-header">
+      <div class="step-number">4</div>
+      <h2>Configure Environment</h2>
+    </div>
+    <p>Create a <code>.env</code> file in the project root. Choose the format that fits your setup:</p>
+
+    <div class="tab-group">
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab(event, 'single')">Single Account</button>
+        <button class="tab-btn" onclick="switchTab(event, 'multi')">Multi-Account</button>
+      </div>
+      <div class="tab-content active" id="tab-single">
+        <pre><code><span class="comment"># .env - Single account setup</span>
+<span class="key">GHL_API_KEY</span>=<span class="string">pit-your-api-key-here</span>
+<span class="key">GHL_LOCATION_ID</span>=<span class="string">your-location-id-here</span>
+<span class="key">GHL_BASE_URL</span>=<span class="string">https://services.leadconnectorhq.com</span></code></pre>
+      </div>
+      <div class="tab-content" id="tab-multi">
+        <pre><code><span class="comment"># .env - Multi-account setup</span>
+<span class="comment"># List your account names (no spaces around commas)</span>
+<span class="key">GHL_ACCOUNTS</span>=<span class="string">Acme,BetaCorp,GammaLLC</span>
+
+<span class="comment"># Acme credentials</span>
+<span class="key">GHL_Acme_API_KEY</span>=<span class="string">pit-xxxxxxxxxxxxx</span>
+<span class="key">GHL_Acme_LOCATION_ID</span>=<span class="string">abc123def456</span>
+
+<span class="comment"># BetaCorp credentials</span>
+<span class="key">GHL_BetaCorp_API_KEY</span>=<span class="string">pit-yyyyyyyyyyyyy</span>
+<span class="key">GHL_BetaCorp_LOCATION_ID</span>=<span class="string">ghi789jkl012</span>
+
+<span class="comment"># GammaLLC credentials</span>
+<span class="key">GHL_GammaLLC_API_KEY</span>=<span class="string">pit-zzzzzzzzzzzzz</span>
+<span class="key">GHL_GammaLLC_LOCATION_ID</span>=<span class="string">mno345pqr678</span>
+
+<span class="key">GHL_BASE_URL</span>=<span class="string">https://services.leadconnectorhq.com</span></code></pre>
+        <div class="callout callout-info">
+          <span class="callout-icon">&#9432;</span>
+          <div>The first account in the list (<code>Acme</code>) becomes the active default on startup. Account names can be anything &mdash; use client names, project names, etc. No spaces in names.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <span class="callout-icon">&#9888;</span>
+      <div><strong>Never commit your <code>.env</code> file to Git.</strong> It contains secret API keys. The <code>.gitignore</code> should already exclude it.</div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="step-5">
+    <div class="step-header">
+      <div class="step-number">5</div>
+      <h2>Build the Server</h2>
+    </div>
+    <pre><code><span class="cmd">npm run build</span></code></pre>
+    <p>This compiles TypeScript into the <code>dist/</code> folder. You should see no errors. If you do, make sure you ran <code>npm install</code> first.</p>
+    <p>To verify the build worked:</p>
+    <pre><code><span class="cmd">ls</span> dist/server.js dist/http-server.js
+<span class="comment"># Both files should exist</span></code></pre>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="step-6">
+    <div class="step-header">
+      <div class="step-number">6</div>
+      <h2>Connect to Claude Desktop</h2>
+    </div>
+    <p>Open your Claude Desktop config file:</p>
+    <table>
+      <tr><th>OS</th><th>Config File Location</th></tr>
+      <tr><td>macOS</td><td><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></td></tr>
+      <tr><td>Windows</td><td><code>%APPDATA%\Claude\claude_desktop_config.json</code></td></tr>
+    </table>
+    <p>Add the MCP server configuration. Choose your setup:</p>
+
+    <div class="tab-group">
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab(event, 'desktop-single')">Single Account</button>
+        <button class="tab-btn" onclick="switchTab(event, 'desktop-multi')">Multi-Account</button>
+      </div>
+      <div class="tab-content active" id="tab-desktop-single">
+        <pre><code>{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"ghl"</span>: {
+      <span class="key">"command"</span>: <span class="string">"node"</span>,
+      <span class="key">"args"</span>: [<span class="string">"/full/path/to/GoHighLevel-MCP/dist/server.js"</span>],
+      <span class="key">"env"</span>: {
+        <span class="key">"GHL_API_KEY"</span>: <span class="string">"pit-your-api-key"</span>,
+        <span class="key">"GHL_LOCATION_ID"</span>: <span class="string">"your-location-id"</span>,
+        <span class="key">"GHL_BASE_URL"</span>: <span class="string">"https://services.leadconnectorhq.com"</span>
+      }
+    }
+  }
+}</code></pre>
+      </div>
+      <div class="tab-content" id="tab-desktop-multi">
+        <pre><code>{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"ghl"</span>: {
+      <span class="key">"command"</span>: <span class="string">"node"</span>,
+      <span class="key">"args"</span>: [<span class="string">"/full/path/to/GoHighLevel-MCP/dist/server.js"</span>],
+      <span class="key">"env"</span>: {
+        <span class="key">"GHL_ACCOUNTS"</span>: <span class="string">"Acme,BetaCorp,GammaLLC"</span>,
+        <span class="key">"GHL_Acme_API_KEY"</span>: <span class="string">"pit-xxx"</span>,
+        <span class="key">"GHL_Acme_LOCATION_ID"</span>: <span class="string">"abc123"</span>,
+        <span class="key">"GHL_BetaCorp_API_KEY"</span>: <span class="string">"pit-yyy"</span>,
+        <span class="key">"GHL_BetaCorp_LOCATION_ID"</span>: <span class="string">"def456"</span>,
+        <span class="key">"GHL_GammaLLC_API_KEY"</span>: <span class="string">"pit-zzz"</span>,
+        <span class="key">"GHL_GammaLLC_LOCATION_ID"</span>: <span class="string">"ghi789"</span>,
+        <span class="key">"GHL_BASE_URL"</span>: <span class="string">"https://services.leadconnectorhq.com"</span>
+      }
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">&#9888;</span>
+      <div>Replace <code>/full/path/to/GoHighLevel-MCP</code> with the actual absolute path on your machine. On Mac, you can drag the folder into Terminal to get the path. When using <code>env</code> in the config, the <code>.env</code> file is not needed.</div>
+    </div>
+    <p>After saving the config, <strong>restart Claude Desktop</strong> completely (quit and reopen). You should see "ghl" appear as a connected MCP server.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="step-7">
+    <div class="step-header">
+      <div class="step-number">7</div>
+      <h2>Connect to Claude Code (CLI)</h2>
+    </div>
+    <p>If you use Claude Code instead of (or in addition to) Claude Desktop, add the server to your Claude Code MCP config:</p>
+    <pre><code><span class="cmd">claude mcp add</span> ghl <span class="flag">--</span> node /full/path/to/GoHighLevel-MCP/dist/server.js</code></pre>
+    <p>For multi-account, set the environment variables in your shell before running Claude Code, or create a wrapper script:</p>
+    <pre><code><span class="comment">#!/bin/bash</span>
+<span class="comment"># save as run-ghl-mcp.sh</span>
+<span class="key">export</span> GHL_ACCOUNTS=<span class="string">"Acme,BetaCorp"</span>
+<span class="key">export</span> GHL_Acme_API_KEY=<span class="string">"pit-xxx"</span>
+<span class="key">export</span> GHL_Acme_LOCATION_ID=<span class="string">"abc123"</span>
+<span class="key">export</span> GHL_BetaCorp_API_KEY=<span class="string">"pit-yyy"</span>
+<span class="key">export</span> GHL_BetaCorp_LOCATION_ID=<span class="string">"def456"</span>
+<span class="key">export</span> GHL_BASE_URL=<span class="string">"https://services.leadconnectorhq.com"</span>
+<span class="cmd">node</span> /full/path/to/GoHighLevel-MCP/dist/server.js</code></pre>
+    <p>Then register it:</p>
+    <pre><code><span class="cmd">claude mcp add</span> ghl <span class="flag">--</span> bash /full/path/to/run-ghl-mcp.sh</code></pre>
+    <p>Alternatively, if your <code>.env</code> file is configured, the server will read from it automatically.</p>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="step-8">
+    <div class="step-header">
+      <div class="step-number">8</div>
+      <h2>Deploy to Railway (Remote Hosting)</h2>
+    </div>
+    <p>Hosting the server on Railway means you manage all accounts in one place &mdash; no config files on individual machines. Railway keeps the server always running with instant responses.</p>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">&#9432;</span>
+      <div><strong>Why Railway?</strong> This MCP server uses persistent SSE connections that need a long-running Node.js process. Serverless platforms (Cloudflare Workers, Vercel) won't work due to execution time limits. Railway runs your server 24/7 and offers ~$5/month of free compute &mdash; enough for this server.</div>
+    </div>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8a. Create a Railway Account</h3>
+    <ol>
+      <li>Go to <code>https://railway.app</code> and sign up (GitHub login is easiest)</li>
+      <li>You'll land on the dashboard &mdash; no credit card needed for the free tier</li>
+    </ol>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8b. Push Your Code to GitHub</h3>
+    <p>Railway deploys from a GitHub repo. If your code isn't already on GitHub:</p>
+    <pre><code><span class="comment"># Create a new repo on github.com, then:</span>
+<span class="cmd">cd</span> GoHighLevel-MCP
+<span class="cmd">git remote add</span> origin https://github.com/YOUR_USERNAME/GoHighLevel-MCP.git
+<span class="cmd">git push</span> <span class="flag">-u</span> origin main</code></pre>
+    <div class="callout callout-danger">
+      <span class="callout-icon">&#9888;</span>
+      <div>Make sure <code>.env</code> is in your <code>.gitignore</code> so your API keys are never pushed to GitHub. Railway has its own secure way to set environment variables.</div>
+    </div>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8c. Create a New Railway Project</h3>
+    <ol>
+      <li>On the Railway dashboard, click <strong>"New Project"</strong></li>
+      <li>Select <strong>"Deploy from GitHub Repo"</strong></li>
+      <li>Find and select your <strong>GoHighLevel-MCP</strong> repository</li>
+      <li>Railway will detect it as a Node.js project and start deploying</li>
+    </ol>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8d. Configure Build &amp; Start Commands</h3>
+    <p>Click on your service in Railway, go to <strong>Settings</strong>, and set:</p>
+    <table>
+      <tr><th>Setting</th><th>Value</th></tr>
+      <tr><td><strong>Build Command</strong></td><td><code>npm install && npm run build</code></td></tr>
+      <tr><td><strong>Start Command</strong></td><td><code>npm run start:http</code></td></tr>
+    </table>
+    <p>Railway usually auto-detects these, but verify they're correct.</p>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8e. Set Environment Variables</h3>
+    <p>In your Railway service, go to the <strong>"Variables"</strong> tab and add your GHL credentials. Click <strong>"New Variable"</strong> for each one:</p>
+
+    <div class="tab-group">
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab(event, 'railway-single')">Single Account</button>
+        <button class="tab-btn" onclick="switchTab(event, 'railway-multi')">Multi-Account</button>
+      </div>
+      <div class="tab-content active" id="tab-railway-single">
+        <table>
+          <tr><th>Variable Name</th><th>Value</th></tr>
+          <tr><td><code>GHL_API_KEY</code></td><td>Your <code>pit-...</code> API key</td></tr>
+          <tr><td><code>GHL_LOCATION_ID</code></td><td>Your location ID</td></tr>
+          <tr><td><code>GHL_BASE_URL</code></td><td><code>https://services.leadconnectorhq.com</code></td></tr>
+          <tr><td><code>PORT</code></td><td><code>8000</code></td></tr>
+        </table>
+      </div>
+      <div class="tab-content" id="tab-railway-multi">
+        <table>
+          <tr><th>Variable Name</th><th>Value</th></tr>
+          <tr><td><code>GHL_ACCOUNTS</code></td><td><code>Acme,BetaCorp,GammaLLC</code></td></tr>
+          <tr><td><code>GHL_Acme_API_KEY</code></td><td><code>pit-xxx...</code></td></tr>
+          <tr><td><code>GHL_Acme_LOCATION_ID</code></td><td><code>abc123...</code></td></tr>
+          <tr><td><code>GHL_BetaCorp_API_KEY</code></td><td><code>pit-yyy...</code></td></tr>
+          <tr><td><code>GHL_BetaCorp_LOCATION_ID</code></td><td><code>def456...</code></td></tr>
+          <tr><td><code>GHL_GammaLLC_API_KEY</code></td><td><code>pit-zzz...</code></td></tr>
+          <tr><td><code>GHL_GammaLLC_LOCATION_ID</code></td><td><code>ghi789...</code></td></tr>
+          <tr><td><code>GHL_BASE_URL</code></td><td><code>https://services.leadconnectorhq.com</code></td></tr>
+          <tr><td><code>PORT</code></td><td><code>8000</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">&#9432;</span>
+      <div><strong>To add or remove accounts later</strong>, just update the variables in Railway's dashboard and the server will automatically redeploy. No code changes needed.</div>
+    </div>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8f. Generate a Public URL</h3>
+    <ol>
+      <li>In your Railway service, go to <strong>Settings &rarr; Networking</strong></li>
+      <li>Click <strong>"Generate Domain"</strong></li>
+      <li>Railway will give you a URL like: <code>https://ghl-mcp-server-production-xxxx.up.railway.app</code></li>
+    </ol>
+    <p>Test that it's working by visiting your URL in a browser. You should see a JSON response with the server info.</p>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8g. Verify the Deployment</h3>
+    <p>Check these endpoints to confirm everything is running:</p>
+    <table>
+      <tr><th>URL</th><th>What You Should See</th></tr>
+      <tr><td><code>https://your-app.up.railway.app/</code></td><td>Server info JSON with name, version, account count</td></tr>
+      <tr><td><code>https://your-app.up.railway.app/health</code></td><td><code>{"status":"healthy",...}</code></td></tr>
+      <tr><td><code>https://your-app.up.railway.app/tools</code></td><td>Full list of 270+ tools</td></tr>
+    </table>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8h. Connect Claude to the Hosted Server</h3>
+    <p>Now update your Claude Desktop config to point to the Railway URL instead of a local server:</p>
+    <pre><code>{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"ghl"</span>: {
+      <span class="key">"url"</span>: <span class="string">"https://your-app.up.railway.app/sse"</span>
+    }
+  }
+}</code></pre>
+    <p>That's it &mdash; no <code>command</code>, <code>args</code>, or <code>env</code> needed. Claude connects to the remote server over SSE. All account credentials live securely on Railway.</p>
+
+    <div class="callout callout-success">
+      <span class="callout-icon">&#10003;</span>
+      <div><strong>Benefits of hosting on Railway:</strong>
+        <ul style="margin-top: 8px; padding-left: 20px;">
+          <li>Add/remove GHL accounts by editing Railway variables &mdash; no client updates</li>
+          <li>Server is always running (no cold starts or sleep delays)</li>
+          <li>Auto-deploys when you push code changes to GitHub</li>
+          <li>View logs in real-time from the Railway dashboard</li>
+          <li>Free tier covers typical usage (~$1-3/month)</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin: 24px 0 12px; color: var(--accent);">8i. Railway Dashboard Cheat Sheet</h3>
+    <table>
+      <tr><th>Task</th><th>Where in Railway</th></tr>
+      <tr><td>Add a new GHL account</td><td>Service &rarr; Variables &rarr; update <code>GHL_ACCOUNTS</code> and add the new <code>GHL_{name}_API_KEY</code> / <code>GHL_{name}_LOCATION_ID</code> vars</td></tr>
+      <tr><td>View server logs</td><td>Service &rarr; Deployments &rarr; click latest deployment &rarr; View Logs</td></tr>
+      <tr><td>Restart the server</td><td>Service &rarr; Deployments &rarr; Redeploy</td></tr>
+      <tr><td>Check usage/costs</td><td>Project Settings &rarr; Usage</td></tr>
+      <tr><td>Set a custom domain</td><td>Service &rarr; Settings &rarr; Networking &rarr; Custom Domain</td></tr>
+    </table>
+  </div>
+
+  <!-- Step 9 -->
+  <div class="step" id="step-9">
+    <div class="step-header">
+      <div class="step-number">9</div>
+      <h2>Verify Everything Works</h2>
+    </div>
+    <p>Open Claude and try these prompts to verify the connection:</p>
+    <pre><code><span class="comment"># Test basic connectivity</span>
+"List my GHL sub-accounts"
+
+<span class="comment"># Test contact access</span>
+"Search for contacts in GoHighLevel"
+
+<span class="comment"># Test multi-account (if configured)</span>
+"Switch to the BetaCorp sub-account and list their contacts"</code></pre>
+    <p>If everything is working, Claude will respond with data from your GHL account.</p>
+    <div class="callout callout-success">
+      <span class="callout-icon">&#10003;</span>
+      <div><strong>Success!</strong> You should see Claude accessing your GHL data. The server provides 270+ tools across contacts, conversations, calendars, opportunities, email templates, invoices, products, and more.</div>
+    </div>
+  </div>
+
+  <!-- Step 10 -->
+  <div class="step" id="step-10">
+    <div class="step-header">
+      <div class="step-number">10</div>
+      <h2>Multi-Account Usage</h2>
+    </div>
+    <p>When multiple accounts are configured, Claude has two special tools:</p>
+    <table>
+      <tr><th>Tool</th><th>What It Does</th></tr>
+      <tr><td><code>list_subaccounts</code></td><td>Shows all configured accounts and which is currently active</td></tr>
+      <tr><td><code>switch_subaccount</code></td><td>Switches all subsequent calls to a different account</td></tr>
+    </table>
+    <p>Example conversation:</p>
+    <pre><code><span class="comment">You:</span>  "What sub-accounts do I have?"
+<span class="comment">Claude:</span> calls list_subaccounts &rarr; shows Acme (active), BetaCorp, GammaLLC
+
+<span class="comment">You:</span>  "Switch to BetaCorp and show me their recent contacts"
+<span class="comment">Claude:</span> calls switch_subaccount(name: "BetaCorp")
+       calls search_contacts &rarr; returns BetaCorp's contacts
+
+<span class="comment">You:</span>  "Now check Acme's email templates"
+<span class="comment">Claude:</span> calls switch_subaccount(name: "Acme")
+       calls get_email_templates &rarr; returns Acme's templates</code></pre>
+    <p>The first account in your <code>GHL_ACCOUNTS</code> list is the default active account when the server starts.</p>
+  </div>
+
+  <!-- Step 11 -->
+  <div class="step" id="step-11">
+    <div class="step-header">
+      <div class="step-number">11</div>
+      <h2>Troubleshooting</h2>
+    </div>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Server won't start</h3>
+    <ul>
+      <li>Check that <code>node --version</code> is 18+</li>
+      <li>Run <code>npm install</code> again</li>
+      <li>Run <code>npm run build</code> and check for errors</li>
+      <li>Verify your <code>.env</code> has no typos in variable names</li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">API calls return 401 Unauthorized</h3>
+    <ul>
+      <li>Your API key may be invalid or expired &mdash; regenerate it in GHL</li>
+      <li>Make sure the key starts with <code>pit-</code> (Private Integration Token)</li>
+      <li>Check that the Location ID matches the sub-account the key was created in</li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">API calls return 403 Forbidden</h3>
+    <ul>
+      <li>The API key is missing required scopes &mdash; go to GHL Settings &rarr; Private Integrations and enable the needed permissions</li>
+      <li>Common missing scopes: <code>emails/builder.write</code>, <code>locations/customFields.write</code></li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Claude doesn't see the MCP server</h3>
+    <ul>
+      <li>Make sure you fully restarted Claude Desktop after editing the config</li>
+      <li>Check that the path in <code>"args"</code> points to <code>dist/server.js</code> (not <code>src/server.ts</code>)</li>
+      <li>Make sure the path is absolute, not relative</li>
+      <li>On Windows, use double backslashes: <code>"C:\\Users\\..."</code></li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Multi-account: "Account not found"</h3>
+    <ul>
+      <li>Account names are case-sensitive &mdash; <code>Acme</code> is different from <code>acme</code></li>
+      <li>Make sure the name matches exactly between <code>GHL_ACCOUNTS</code> and <code>GHL_{name}_API_KEY</code></li>
+      <li>No spaces in account names</li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">View server logs</h3>
+    <p>The server logs to stderr. To see logs when running locally:</p>
+    <pre><code><span class="comment"># Run stdio server with visible logs</span>
+<span class="cmd">node</span> dist/server.js <span class="flag">2>&1</span>
+
+<span class="comment"># HTTP server logs to console automatically</span>
+<span class="cmd">npm run start:http</span></code></pre>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Railway: deploy fails</h3>
+    <ul>
+      <li>Check the build logs in Railway &rarr; Deployments &rarr; click the failed deployment</li>
+      <li>Make sure <strong>Build Command</strong> is <code>npm install && npm run build</code></li>
+      <li>Make sure <strong>Start Command</strong> is <code>npm run start:http</code></li>
+      <li>Verify all required environment variables are set (no typos in variable names)</li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Railway: server starts but Claude can't connect</h3>
+    <ul>
+      <li>Make sure you generated a public domain in Railway &rarr; Settings &rarr; Networking</li>
+      <li>Your Claude Desktop config should use <code>"url"</code> pointing to <code>https://your-app.up.railway.app/sse</code> (note the <code>/sse</code> path)</li>
+      <li>Visit <code>https://your-app.up.railway.app/health</code> in a browser to confirm the server is reachable</li>
+      <li>Check Railway logs for connection errors</li>
+    </ul>
+
+    <h3 style="margin: 20px 0 12px; color: var(--orange);">Railway: exceeded free tier</h3>
+    <ul>
+      <li>Check usage at Project Settings &rarr; Usage in Railway</li>
+      <li>The free tier gives $5/month of credit &mdash; this server typically uses $1-3/month</li>
+      <li>If you exceed it, add a payment method in Railway to continue service</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">
+    <p>GoHighLevel MCP Server v1.0.0 &mdash; 270+ tools across 19+ categories</p>
+    <p style="margin-top: 8px; font-size: 0.9em;">Built for Claude Desktop and Claude Code</p>
+  </div>
+
+</div>
+
+<script>
+function switchTab(event, tabId) {
+  const group = event.target.closest('.tab-group');
+  group.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  group.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  event.target.classList.add('active');
+  const prefix = 'tab-' + tabId;
+  const contents = group.querySelectorAll('.tab-content');
+  contents.forEach(c => {
+    if (c.id === prefix || c.id === 'tab-' + tabId) {
+      c.classList.add('active');
+    }
+  });
+}
+</script>
+
+</body>
+</html>
