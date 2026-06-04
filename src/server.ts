@@ -39,30 +39,40 @@ import { InvoicesTools } from './tools/invoices-tools.js';
 dotenv.config();
 
 /**
+ * Holds all tool instances for a single GHL sub-account
+ */
+interface AccountToolSet {
+  name: string;
+  locationId: string;
+  client: GHLApiClient;
+  contactTools: ContactTools;
+  conversationTools: ConversationTools;
+  blogTools: BlogTools;
+  opportunityTools: OpportunityTools;
+  calendarTools: CalendarTools;
+  emailTools: EmailTools;
+  locationTools: LocationTools;
+  emailISVTools: EmailISVTools;
+  socialMediaTools: SocialMediaTools;
+  mediaTools: MediaTools;
+  objectTools: ObjectTools;
+  associationTools: AssociationTools;
+  customFieldV2Tools: CustomFieldV2Tools;
+  workflowTools: WorkflowTools;
+  surveyTools: SurveyTools;
+  storeTools: StoreTools;
+  productsTools: ProductsTools;
+  paymentsTools: PaymentsTools;
+  invoicesTools: InvoicesTools;
+}
+
+/**
  * Main MCP Server class
  */
 class GHLMCPServer {
   private server: Server;
-  private ghlClient: GHLApiClient;
-  private contactTools: ContactTools;
-  private conversationTools: ConversationTools;
-  private blogTools: BlogTools;
-  private opportunityTools: OpportunityTools;
-  private calendarTools: CalendarTools;
-  private emailTools: EmailTools;
-  private locationTools: LocationTools;
-  private emailISVTools: EmailISVTools;
-  private socialMediaTools: SocialMediaTools;
-  private mediaTools: MediaTools;
-  private objectTools: ObjectTools;
-  private associationTools: AssociationTools;
-  private customFieldV2Tools: CustomFieldV2Tools;
-  private workflowTools: WorkflowTools;
-  private surveyTools: SurveyTools;
-  private storeTools: StoreTools;
-  private productsTools: ProductsTools;
-  private paymentsTools: PaymentsTools;
-  private invoicesTools: InvoicesTools;
+  private accounts: Map<string, AccountToolSet> = new Map();
+  private activeAccountName: string = '';
 
   constructor() {
     // Initialize MCP server with capabilities
@@ -78,135 +88,200 @@ class GHLMCPServer {
       }
     );
 
-    // Initialize GHL API client
-    this.ghlClient = this.initializeGHLClient();
-    
-    // Initialize tools
-    this.contactTools = new ContactTools(this.ghlClient);
-    this.conversationTools = new ConversationTools(this.ghlClient);
-    this.blogTools = new BlogTools(this.ghlClient);
-    this.opportunityTools = new OpportunityTools(this.ghlClient);
-    this.calendarTools = new CalendarTools(this.ghlClient);
-    this.emailTools = new EmailTools(this.ghlClient);
-    this.locationTools = new LocationTools(this.ghlClient);
-    this.emailISVTools = new EmailISVTools(this.ghlClient);
-    this.socialMediaTools = new SocialMediaTools(this.ghlClient);
-    this.mediaTools = new MediaTools(this.ghlClient);
-    this.objectTools = new ObjectTools(this.ghlClient);
-    this.associationTools = new AssociationTools(this.ghlClient);
-    this.customFieldV2Tools = new CustomFieldV2Tools(this.ghlClient);
-    this.workflowTools = new WorkflowTools(this.ghlClient);
-    this.surveyTools = new SurveyTools(this.ghlClient);
-    this.storeTools = new StoreTools(this.ghlClient);
-    this.productsTools = new ProductsTools(this.ghlClient);
-    this.paymentsTools = new PaymentsTools(this.ghlClient);
-    this.invoicesTools = new InvoicesTools(this.ghlClient);
+    // Initialize all GHL accounts
+    this.initializeAccounts();
 
     // Setup MCP handlers
     this.setupHandlers();
   }
 
   /**
-   * Initialize GoHighLevel API client with configuration
+   * Get the currently active account's tool set
    */
-  private initializeGHLClient(): GHLApiClient {
-    // Load configuration from environment
-    const config: GHLConfig = {
-      accessToken: process.env.GHL_API_KEY || '',
-      baseUrl: process.env.GHL_BASE_URL || 'https://services.leadconnectorhq.com',
-      version: '2021-07-28',
-      locationId: process.env.GHL_LOCATION_ID || ''
+  private getActiveAccount(): AccountToolSet {
+    const account = this.accounts.get(this.activeAccountName);
+    if (!account) {
+      throw new Error(`No active account. Available: ${Array.from(this.accounts.keys()).join(', ')}`);
+    }
+    return account;
+  }
+
+  /**
+   * Initialize all GHL accounts from environment variables.
+   *
+   * Supports two formats:
+   *
+   * Multi-account (new):
+   *   GHL_ACCOUNTS=ClientA,ClientB
+   *   GHL_ClientA_API_KEY=pit-xxx
+   *   GHL_ClientA_LOCATION_ID=abc123
+   *   GHL_ClientB_API_KEY=pit-yyy
+   *   GHL_ClientB_LOCATION_ID=def456
+   *
+   * Single-account (legacy, still works):
+   *   GHL_API_KEY=pit-xxx
+   *   GHL_LOCATION_ID=abc123
+   */
+  private initializeAccounts(): void {
+    const accountNames = process.env.GHL_ACCOUNTS;
+    const baseUrl = process.env.GHL_BASE_URL || 'https://services.leadconnectorhq.com';
+
+    if (accountNames) {
+      // Multi-account mode
+      const names = accountNames.split(',').map(n => n.trim()).filter(Boolean);
+      if (names.length === 0) {
+        throw new Error('GHL_ACCOUNTS is set but contains no account names');
+      }
+
+      for (const name of names) {
+        const apiKey = process.env[`GHL_${name}_API_KEY`];
+        const locationId = process.env[`GHL_${name}_LOCATION_ID`];
+
+        if (!apiKey) {
+          throw new Error(`GHL_${name}_API_KEY environment variable is required for account "${name}"`);
+        }
+        if (!locationId) {
+          throw new Error(`GHL_${name}_LOCATION_ID environment variable is required for account "${name}"`);
+        }
+
+        const account = this.createAccountToolSet(name, {
+          accessToken: apiKey,
+          baseUrl,
+          version: '2021-07-28',
+          locationId
+        });
+        this.accounts.set(name, account);
+        process.stderr.write(`[GHL MCP] Loaded account "${name}" (Location: ${locationId})\n`);
+      }
+
+      this.activeAccountName = names[0];
+      process.stderr.write(`[GHL MCP] Active account: "${this.activeAccountName}"\n`);
+    } else {
+      // Legacy single-account mode
+      const apiKey = process.env.GHL_API_KEY || '';
+      const locationId = process.env.GHL_LOCATION_ID || '';
+
+      if (!apiKey) {
+        throw new Error('GHL_API_KEY environment variable is required (or use GHL_ACCOUNTS for multi-account)');
+      }
+      if (!locationId) {
+        throw new Error('GHL_LOCATION_ID environment variable is required (or use GHL_ACCOUNTS for multi-account)');
+      }
+
+      const name = 'default';
+      const account = this.createAccountToolSet(name, {
+        accessToken: apiKey,
+        baseUrl,
+        version: '2021-07-28',
+        locationId
+      });
+      this.accounts.set(name, account);
+      this.activeAccountName = name;
+
+      process.stderr.write(`[GHL MCP] Single-account mode (Location: ${locationId})\n`);
+    }
+  }
+
+  /**
+   * Create a full tool set for a single GHL account
+   */
+  private createAccountToolSet(name: string, config: GHLConfig): AccountToolSet {
+    const client = new GHLApiClient(config);
+    return {
+      name,
+      locationId: config.locationId,
+      client,
+      contactTools: new ContactTools(client),
+      conversationTools: new ConversationTools(client),
+      blogTools: new BlogTools(client),
+      opportunityTools: new OpportunityTools(client),
+      calendarTools: new CalendarTools(client),
+      emailTools: new EmailTools(client),
+      locationTools: new LocationTools(client),
+      emailISVTools: new EmailISVTools(client),
+      socialMediaTools: new SocialMediaTools(client),
+      mediaTools: new MediaTools(client),
+      objectTools: new ObjectTools(client),
+      associationTools: new AssociationTools(client),
+      customFieldV2Tools: new CustomFieldV2Tools(client),
+      workflowTools: new WorkflowTools(client),
+      surveyTools: new SurveyTools(client),
+      storeTools: new StoreTools(client),
+      productsTools: new ProductsTools(client),
+      paymentsTools: new PaymentsTools(client),
+      invoicesTools: new InvoicesTools(client),
     };
-
-    // Validate required configuration
-    if (!config.accessToken) {
-      throw new Error('GHL_API_KEY environment variable is required');
-    }
-
-    if (!config.locationId) {
-      throw new Error('GHL_LOCATION_ID environment variable is required');
-    }
-
-    process.stderr.write('[GHL MCP] Initializing GHL API client...\n');
-    process.stderr.write(`[GHL MCP] Base URL: ${config.baseUrl}\n`);
-    process.stderr.write(`[GHL MCP] Version: ${config.version}\n`);
-    process.stderr.write(`[GHL MCP] Location ID: ${config.locationId}\n`);
-
-    return new GHLApiClient(config);
   }
 
   /**
    * Setup MCP request handlers
    */
+  /**
+   * Get the account management tool definitions (list/switch subaccounts)
+   */
+  private getAccountToolDefinitions() {
+    return [
+      {
+        name: 'list_subaccounts',
+        description: 'List all configured GHL sub-accounts and show which one is currently active.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {}
+        }
+      },
+      {
+        name: 'switch_subaccount',
+        description: 'Switch the active GHL sub-account. All subsequent tool calls will use this account until switched again.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            name: {
+              type: 'string',
+              description: 'The name of the sub-account to switch to (as configured in .env GHL_ACCOUNTS)'
+            }
+          },
+          required: ['name']
+        }
+      }
+    ];
+  }
+
   private setupHandlers(): void {
     // Handle list tools requests
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       process.stderr.write('[GHL MCP] Listing available tools...\n');
-      
+
       try {
-        const contactToolDefinitions = this.contactTools.getToolDefinitions();
-        const conversationToolDefinitions = this.conversationTools.getToolDefinitions();
-        const blogToolDefinitions = this.blogTools.getToolDefinitions();
-        const opportunityToolDefinitions = this.opportunityTools.getToolDefinitions();
-        const calendarToolDefinitions = this.calendarTools.getToolDefinitions();
-        const emailToolDefinitions = this.emailTools.getToolDefinitions();
-        const locationToolDefinitions = this.locationTools.getToolDefinitions();
-        const emailISVToolDefinitions = this.emailISVTools.getToolDefinitions();
-        const socialMediaToolDefinitions = this.socialMediaTools.getTools();
-        const mediaToolDefinitions = this.mediaTools.getToolDefinitions();
-        const objectToolDefinitions = this.objectTools.getToolDefinitions();
-        const associationToolDefinitions = this.associationTools.getTools();
-        const customFieldV2ToolDefinitions = this.customFieldV2Tools.getTools();
-        const workflowToolDefinitions = this.workflowTools.getTools();
-        const surveyToolDefinitions = this.surveyTools.getTools();
-        const storeToolDefinitions = this.storeTools.getTools();
-        const productsToolDefinitions = this.productsTools.getTools();
-        const paymentsToolDefinitions = this.paymentsTools.getTools();
-        const invoicesToolDefinitions = this.invoicesTools.getTools();
-        
+        // Use the active account to get tool definitions (they're the same across accounts)
+        const acct = this.getActiveAccount();
+
         const allTools = [
-          ...contactToolDefinitions,
-          ...conversationToolDefinitions,
-          ...blogToolDefinitions,
-          ...opportunityToolDefinitions,
-          ...calendarToolDefinitions,
-          ...emailToolDefinitions,
-          ...locationToolDefinitions,
-          ...emailISVToolDefinitions,
-          ...socialMediaToolDefinitions,
-          ...mediaToolDefinitions,
-          ...objectToolDefinitions,
-          ...associationToolDefinitions,
-          ...customFieldV2ToolDefinitions,
-          ...workflowToolDefinitions,
-          ...surveyToolDefinitions,
-          ...storeToolDefinitions,
-          ...productsToolDefinitions,
-          ...paymentsToolDefinitions,
-          ...invoicesToolDefinitions
+          // Account management tools (always first)
+          ...this.getAccountToolDefinitions(),
+          // GHL tools
+          ...acct.contactTools.getToolDefinitions(),
+          ...acct.conversationTools.getToolDefinitions(),
+          ...acct.blogTools.getToolDefinitions(),
+          ...acct.opportunityTools.getToolDefinitions(),
+          ...acct.calendarTools.getToolDefinitions(),
+          ...acct.emailTools.getToolDefinitions(),
+          ...acct.locationTools.getToolDefinitions(),
+          ...acct.emailISVTools.getToolDefinitions(),
+          ...acct.socialMediaTools.getTools(),
+          ...acct.mediaTools.getToolDefinitions(),
+          ...acct.objectTools.getToolDefinitions(),
+          ...acct.associationTools.getTools(),
+          ...acct.customFieldV2Tools.getTools(),
+          ...acct.workflowTools.getTools(),
+          ...acct.surveyTools.getTools(),
+          ...acct.storeTools.getTools(),
+          ...acct.productsTools.getTools(),
+          ...acct.paymentsTools.getTools(),
+          ...acct.invoicesTools.getTools()
         ];
-        
-        process.stderr.write(`[GHL MCP] Registered ${allTools.length} tools total:\n`);
-        process.stderr.write(`[GHL MCP] - ${contactToolDefinitions.length} contact tools\n`);
-        process.stderr.write(`[GHL MCP] - ${conversationToolDefinitions.length} conversation tools\n`);
-        process.stderr.write(`[GHL MCP] - ${blogToolDefinitions.length} blog tools\n`);
-        process.stderr.write(`[GHL MCP] - ${opportunityToolDefinitions.length} opportunity tools\n`);
-        process.stderr.write(`[GHL MCP] - ${calendarToolDefinitions.length} calendar tools\n`);
-        process.stderr.write(`[GHL MCP] - ${emailToolDefinitions.length} email tools\n`);
-        process.stderr.write(`[GHL MCP] - ${locationToolDefinitions.length} location tools\n`);
-        process.stderr.write(`[GHL MCP] - ${emailISVToolDefinitions.length} email ISV tools\n`);
-        process.stderr.write(`[GHL MCP] - ${socialMediaToolDefinitions.length} social media tools\n`);
-        process.stderr.write(`[GHL MCP] - ${mediaToolDefinitions.length} media tools\n`);
-        process.stderr.write(`[GHL MCP] - ${objectToolDefinitions.length} object tools\n`);
-        process.stderr.write(`[GHL MCP] - ${associationToolDefinitions.length} association tools\n`);
-        process.stderr.write(`[GHL MCP] - ${customFieldV2ToolDefinitions.length} custom field V2 tools\n`);
-        process.stderr.write(`[GHL MCP] - ${workflowToolDefinitions.length} workflow tools\n`);
-        process.stderr.write(`[GHL MCP] - ${surveyToolDefinitions.length} survey tools\n`);
-        process.stderr.write(`[GHL MCP] - ${storeToolDefinitions.length} store tools\n`);
-        process.stderr.write(`[GHL MCP] - ${productsToolDefinitions.length} products tools\n`);
-        process.stderr.write(`[GHL MCP] - ${paymentsToolDefinitions.length} payments tools\n`);
-        process.stderr.write(`[GHL MCP] - ${invoicesToolDefinitions.length} invoices tools\n`);
-        
+
+        process.stderr.write(`[GHL MCP] Registered ${allTools.length} tools (${this.accounts.size} account(s))\n`);
+
         return {
           tools: allTools
         };
@@ -222,58 +297,93 @@ class GHLMCPServer {
     // Handle tool execution requests
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      
-      process.stderr.write(`[GHL MCP] Executing tool: ${name}\n`);
+
+      process.stderr.write(`[GHL MCP] Executing tool: ${name} (account: ${this.activeAccountName})\n`);
       process.stderr.write(`[GHL MCP] Arguments: ${JSON.stringify(args, null, 2)}\n`);
 
       try {
         let result: any;
 
-        // Route to appropriate tool handler
-        if (this.isContactTool(name)) {
-          result = await this.contactTools.executeTool(name, args || {});
-        } else if (this.isConversationTool(name)) {
-          result = await this.conversationTools.executeTool(name, args || {});
-        } else if (this.isBlogTool(name)) {
-          result = await this.blogTools.executeTool(name, args || {});
-        } else if (this.isOpportunityTool(name)) {
-          result = await this.opportunityTools.executeTool(name, args || {});
-        } else if (this.isCalendarTool(name)) {
-          result = await this.calendarTools.executeTool(name, args || {});
-        } else if (this.isEmailTool(name)) {
-          result = await this.emailTools.executeTool(name, args || {});
-        } else if (this.isLocationTool(name)) {
-          result = await this.locationTools.executeTool(name, args || {});
-        } else if (this.isEmailISVTool(name)) {
-          result = await this.emailISVTools.executeTool(name, args || {});
-        } else if (this.isSocialMediaTool(name)) {
-          result = await this.socialMediaTools.executeTool(name, args || {});
-        } else if (this.isMediaTool(name)) {
-          result = await this.mediaTools.executeTool(name, args || {});
-        } else if (this.isObjectTool(name)) {
-          result = await this.objectTools.executeTool(name, args || {});
-        } else if (this.isAssociationTool(name)) {
-          result = await this.associationTools.executeAssociationTool(name, args || {});
-        } else if (this.isCustomFieldV2Tool(name)) {
-          result = await this.customFieldV2Tools.executeCustomFieldV2Tool(name, args || {});
-        } else if (this.isWorkflowTool(name)) {
-          result = await this.workflowTools.executeWorkflowTool(name, args || {});
-        } else if (this.isSurveyTool(name)) {
-          result = await this.surveyTools.executeSurveyTool(name, args || {});
-        } else if (this.isStoreTool(name)) {
-          result = await this.storeTools.executeStoreTool(name, args || {});
-        } else if (this.isProductsTool(name)) {
-          result = await this.productsTools.executeProductsTool(name, args || {});
-        } else if (this.isPaymentsTool(name)) {
-          result = await this.paymentsTools.handleToolCall(name, args || {});
-        } else if (this.isInvoicesTool(name)) {
-          result = await this.invoicesTools.handleToolCall(name, args || {});
+        // Handle account management tools first
+        if (name === 'list_subaccounts') {
+          const accountList = Array.from(this.accounts.entries()).map(([acctName, acct]) => ({
+            name: acctName,
+            locationId: acct.locationId,
+            active: acctName === this.activeAccountName
+          }));
+          result = {
+            success: true,
+            activeAccount: this.activeAccountName,
+            accounts: accountList,
+            message: `${accountList.length} sub-account(s) configured. Active: "${this.activeAccountName}"`
+          };
+        } else if (name === 'switch_subaccount') {
+          const targetName = (args as any)?.name;
+          if (!targetName) {
+            throw new Error('Account name is required');
+          }
+          if (!this.accounts.has(targetName)) {
+            const available = Array.from(this.accounts.keys()).join(', ');
+            throw new Error(`Account "${targetName}" not found. Available: ${available}`);
+          }
+          this.activeAccountName = targetName;
+          const acct = this.accounts.get(targetName)!;
+          process.stderr.write(`[GHL MCP] Switched to account "${targetName}" (Location: ${acct.locationId})\n`);
+          result = {
+            success: true,
+            activeAccount: targetName,
+            locationId: acct.locationId,
+            message: `Switched to sub-account "${targetName}" (Location: ${acct.locationId})`
+          };
         } else {
-          throw new Error(`Unknown tool: ${name}`);
+          // Route to the active account's tool handler
+          const acct = this.getActiveAccount();
+
+          if (this.isContactTool(name)) {
+            result = await acct.contactTools.executeTool(name, args || {});
+          } else if (this.isConversationTool(name)) {
+            result = await acct.conversationTools.executeTool(name, args || {});
+          } else if (this.isBlogTool(name)) {
+            result = await acct.blogTools.executeTool(name, args || {});
+          } else if (this.isOpportunityTool(name)) {
+            result = await acct.opportunityTools.executeTool(name, args || {});
+          } else if (this.isCalendarTool(name)) {
+            result = await acct.calendarTools.executeTool(name, args || {});
+          } else if (this.isEmailTool(name)) {
+            result = await acct.emailTools.executeTool(name, args || {});
+          } else if (this.isLocationTool(name)) {
+            result = await acct.locationTools.executeTool(name, args || {});
+          } else if (this.isEmailISVTool(name)) {
+            result = await acct.emailISVTools.executeTool(name, args || {});
+          } else if (this.isSocialMediaTool(name)) {
+            result = await acct.socialMediaTools.executeTool(name, args || {});
+          } else if (this.isMediaTool(name)) {
+            result = await acct.mediaTools.executeTool(name, args || {});
+          } else if (this.isObjectTool(name)) {
+            result = await acct.objectTools.executeTool(name, args || {});
+          } else if (this.isAssociationTool(name)) {
+            result = await acct.associationTools.executeAssociationTool(name, args || {});
+          } else if (this.isCustomFieldV2Tool(name)) {
+            result = await acct.customFieldV2Tools.executeCustomFieldV2Tool(name, args || {});
+          } else if (this.isWorkflowTool(name)) {
+            result = await acct.workflowTools.executeWorkflowTool(name, args || {});
+          } else if (this.isSurveyTool(name)) {
+            result = await acct.surveyTools.executeSurveyTool(name, args || {});
+          } else if (this.isStoreTool(name)) {
+            result = await acct.storeTools.executeStoreTool(name, args || {});
+          } else if (this.isProductsTool(name)) {
+            result = await acct.productsTools.executeProductsTool(name, args || {});
+          } else if (this.isPaymentsTool(name)) {
+            result = await acct.paymentsTools.handleToolCall(name, args || {});
+          } else if (this.isInvoicesTool(name)) {
+            result = await acct.invoicesTools.handleToolCall(name, args || {});
+          } else {
+            throw new Error(`Unknown tool: ${name}`);
+          }
         }
-        
+
         process.stderr.write(`[GHL MCP] Tool ${name} executed successfully\n`);
-        
+
         return {
           content: [
             {
@@ -284,12 +394,12 @@ class GHLMCPServer {
         };
       } catch (error) {
         console.error(`[GHL MCP] Error executing tool ${name}:`, error);
-        
+
         // Determine appropriate error code
-        const errorCode = error instanceof Error && error.message.includes('404') 
-          ? ErrorCode.InvalidRequest 
+        const errorCode = error instanceof Error && error.message.includes('404')
+          ? ErrorCode.InvalidRequest
           : ErrorCode.InternalError;
-        
+
         throw new McpError(
           errorCode,
           `Tool execution failed: ${error}`
@@ -601,19 +711,18 @@ class GHLMCPServer {
 
 
   /**
-   * Test GHL API connection
+   * Test GHL API connection for all accounts
    */
   private async testGHLConnection(): Promise<void> {
-    try {
-      process.stderr.write('[GHL MCP] Testing GHL API connection...\n');
-      
-      const result = await this.ghlClient.testConnection();
-      
-      process.stderr.write('[GHL MCP] ✅ GHL API connection successful\n');
-      process.stderr.write(`[GHL MCP] Connected to location: ${result.data?.locationId}\n`);
-    } catch (error) {
-      console.error('[GHL MCP] ❌ GHL API connection failed:', error);
-      throw new Error(`Failed to connect to GHL API: ${error}`);
+    for (const [name, acct] of this.accounts) {
+      try {
+        process.stderr.write(`[GHL MCP] Testing connection for account "${name}"...\n`);
+        const result = await acct.client.testConnection();
+        process.stderr.write(`[GHL MCP] ✅ Account "${name}" connected (Location: ${result.data?.locationId})\n`);
+      } catch (error) {
+        console.error(`[GHL MCP] ❌ Account "${name}" connection failed:`, error);
+        throw new Error(`Failed to connect to GHL API for account "${name}": ${error}`);
+      }
     }
   }
 
@@ -639,28 +748,34 @@ class GHLMCPServer {
       process.stderr.write('=====================================\n');
       
       // Available tools summary
-      const contactToolCount = this.contactTools.getToolDefinitions().length;
-      const conversationToolCount = this.conversationTools.getToolDefinitions().length;
-      const blogToolCount = this.blogTools.getToolDefinitions().length;
-      const opportunityToolCount = this.opportunityTools.getToolDefinitions().length;
-      const calendarToolCount = this.calendarTools.getToolDefinitions().length;
-      const emailToolCount = this.emailTools.getToolDefinitions().length;
-      const locationToolCount = this.locationTools.getToolDefinitions().length;
-      const emailISVToolCount = this.emailISVTools.getToolDefinitions().length;
-      const socialMediaToolCount = this.socialMediaTools.getTools().length;
-      const mediaToolCount = this.mediaTools.getToolDefinitions().length;
-      const objectToolCount = this.objectTools.getToolDefinitions().length;
-      const associationToolCount = this.associationTools.getTools().length;
-      const customFieldV2ToolCount = this.customFieldV2Tools.getTools().length;
-      const workflowToolCount = this.workflowTools.getTools().length;
-      const surveyToolCount = this.surveyTools.getTools().length;
-      const storeToolCount = this.storeTools.getTools().length;
-      const productsToolCount = this.productsTools.getTools().length;
-      const paymentsToolCount = this.paymentsTools.getTools().length;
-      const invoicesToolCount = this.invoicesTools.getTools().length;
-      const totalTools = contactToolCount + conversationToolCount + blogToolCount + opportunityToolCount + calendarToolCount + emailToolCount + locationToolCount + emailISVToolCount + socialMediaToolCount + mediaToolCount + objectToolCount + associationToolCount + customFieldV2ToolCount + workflowToolCount + surveyToolCount + storeToolCount + productsToolCount + paymentsToolCount + invoicesToolCount;
+      const acct = this.getActiveAccount();
+      const contactToolCount = acct.contactTools.getToolDefinitions().length;
+      const conversationToolCount = acct.conversationTools.getToolDefinitions().length;
+      const blogToolCount = acct.blogTools.getToolDefinitions().length;
+      const opportunityToolCount = acct.opportunityTools.getToolDefinitions().length;
+      const calendarToolCount = acct.calendarTools.getToolDefinitions().length;
+      const emailToolCount = acct.emailTools.getToolDefinitions().length;
+      const locationToolCount = acct.locationTools.getToolDefinitions().length;
+      const emailISVToolCount = acct.emailISVTools.getToolDefinitions().length;
+      const socialMediaToolCount = acct.socialMediaTools.getTools().length;
+      const mediaToolCount = acct.mediaTools.getToolDefinitions().length;
+      const objectToolCount = acct.objectTools.getToolDefinitions().length;
+      const associationToolCount = acct.associationTools.getTools().length;
+      const customFieldV2ToolCount = acct.customFieldV2Tools.getTools().length;
+      const workflowToolCount = acct.workflowTools.getTools().length;
+      const surveyToolCount = acct.surveyTools.getTools().length;
+      const storeToolCount = acct.storeTools.getTools().length;
+      const productsToolCount = acct.productsTools.getTools().length;
+      const paymentsToolCount = acct.paymentsTools.getTools().length;
+      const invoicesToolCount = acct.invoicesTools.getTools().length;
+      const totalTools = contactToolCount + conversationToolCount + blogToolCount + opportunityToolCount + calendarToolCount + emailToolCount + locationToolCount + emailISVToolCount + socialMediaToolCount + mediaToolCount + objectToolCount + associationToolCount + customFieldV2ToolCount + workflowToolCount + surveyToolCount + storeToolCount + productsToolCount + paymentsToolCount + invoicesToolCount + 2; // +2 for account management tools
       
       process.stderr.write(`📋 Available tools: ${totalTools}\n`);
+      process.stderr.write(`🏢 Sub-accounts: ${this.accounts.size} (active: "${this.activeAccountName}")\n`);
+      for (const [acctName, acctData] of this.accounts) {
+        const marker = acctName === this.activeAccountName ? '→' : ' ';
+        process.stderr.write(`   ${marker} ${acctName} (Location: ${acctData.locationId})\n`);
+      }
       process.stderr.write('\n');
       process.stderr.write('🎯 CONTACT MANAGEMENT (31 tools):\n');
       process.stderr.write('   BASIC: create, search, get, update, delete contacts\n');
