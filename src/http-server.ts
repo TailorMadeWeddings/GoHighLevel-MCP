@@ -36,6 +36,7 @@ import { ProductsTools } from './tools/products-tools.js';
 import { PaymentsTools } from './tools/payments-tools.js';
 import { InvoicesTools } from './tools/invoices-tools.js';
 import { GHLConfig } from './types/ghl-types';
+import { requireAuth, isOAuthEnabled } from './middleware/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -423,7 +424,27 @@ class GHLMCPHttpServer {
    * Setup HTTP routes
    */
   private setupRoutes(): void {
-    // Health check endpoint
+    // OAuth Protected Resource Metadata (RFC 9728)
+    // This MUST be unauthenticated — Claude uses it to discover the auth server
+    this.app.get('/.well-known/oauth-protected-resource', (req, res) => {
+      const resource = process.env.MCP_RESOURCE_IDENTIFIER
+        || `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+      const authServer = process.env.STYTCH_PROJECT_DOMAIN;
+
+      if (!authServer) {
+        res.status(404).json({ error: 'OAuth not configured' });
+        return;
+      }
+
+      res.json({
+        resource,
+        authorization_servers: [authServer],
+        bearer_methods_supported: ['header'],
+        scopes_supported: ['openid', 'profile', 'email']
+      });
+    });
+
+    // Health check endpoint (unauthenticated)
     this.app.get('/health', (req, res) => {
       res.json({
         status: 'healthy',
@@ -518,8 +539,9 @@ class GHLMCPHttpServer {
     };
 
     // Handle both GET and POST for SSE (MCP protocol requirements)
-    this.app.get('/sse', handleSSE);
-    this.app.post('/sse', handleSSE);
+    // Auth middleware gates access when Stytch is configured; passes through in open mode
+    this.app.get('/sse', requireAuth, handleSSE);
+    this.app.post('/sse', requireAuth, handleSSE);
 
     // Root endpoint with server info
     this.app.get('/', (req, res) => {
@@ -808,6 +830,7 @@ class GHLMCPHttpServer {
           const marker = acctName === this.activeAccountName ? '→' : ' ';
           console.log(`   ${marker} ${acctName} (Location: ${acctData.locationId})`);
         }
+        console.log(`🔐 OAuth: ${isOAuthEnabled() ? 'ENABLED (Stytch)' : 'DISABLED (open mode)'}`);
         console.log('=========================================');
       });
 
