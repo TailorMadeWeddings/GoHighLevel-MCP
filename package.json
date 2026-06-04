@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "@stytch/vanilla-js": "^6.0.9",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "axios": "^1.9.0",

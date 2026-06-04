@@ -5,6 +5,8 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
@@ -443,6 +445,26 @@ class GHLMCPHttpServer {
         scopes_supported: ['openid', 'profile', 'email']
       });
     });
+
+    // OAuth consent pages (unauthenticated — these ARE the login/consent flow)
+    // Serves static HTML with the Stytch public token injected into a data attribute
+    const oauthPages = ['authorize', 'login', 'authenticate'];
+    for (const page of oauthPages) {
+      this.app.get(`/oauth/${page}`, (req, res) => {
+        const publicToken = process.env.STYTCH_PUBLIC_TOKEN || '';
+        const htmlPath = path.resolve(process.cwd(), 'public', 'oauth', `${page}.html`);
+
+        try {
+          let html = fs.readFileSync(htmlPath, 'utf-8');
+          // Inject the public token as a data attribute on <html> so the JS can read it
+          html = html.replace('<html lang="en">', `<html lang="en" data-stytch-token="${publicToken}">`);
+          res.type('html').send(html);
+        } catch (err) {
+          console.error(`[GHL MCP HTTP] Failed to serve /oauth/${page}:`, err);
+          res.status(500).send('OAuth page not found');
+        }
+      });
+    }
 
     // Health check endpoint (unauthenticated)
     this.app.get('/health', (req, res) => {
