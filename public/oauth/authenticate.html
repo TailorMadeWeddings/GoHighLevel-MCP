@@ -13,35 +13,45 @@
     <script type="module">
       import { StytchUIClient } from 'https://esm.sh/@stytch/vanilla-js';
 
+      const RETURN_KEY = 'ghl_mcp_oauth_return';
       const publicToken = document.documentElement.dataset.stytchToken;
       const stytch = new StytchUIClient(publicToken);
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const stytch_token_type = params.get('stytch_token_type');
 
+      /**
+       * After authentication, redirect back to /oauth/authorize with the
+       * original OAuth query params so the consent flow can complete.
+       * Uses localStorage because magic links may open in a new tab
+       * where sessionStorage from the original tab is not available.
+       */
+      function redirectAfterAuth() {
+        const returnTo = localStorage.getItem(RETURN_KEY);
+        if (returnTo) {
+          localStorage.removeItem(RETURN_KEY);
+          window.location.href = returnTo;
+        } else {
+          // Fallback: go to authorize (will lack OAuth params, but never goes to /)
+          window.location.href = window.location.origin + '/oauth/authorize';
+        }
+      }
+
       if (token) {
         try {
-          // Handle different token types from magic links vs OAuth
           if (stytch_token_type === 'magic_links') {
             await stytch.magicLinks.authenticate(token, { session_duration_minutes: 60 });
           } else if (stytch_token_type === 'oauth') {
             await stytch.oauth.authenticate(token, { session_duration_minutes: 60 });
           } else {
-            // Default: try OAuth first, fall back to magic links
+            // Unknown type: try OAuth first, fall back to magic links
             try {
               await stytch.oauth.authenticate(token, { session_duration_minutes: 60 });
             } catch {
               await stytch.magicLinks.authenticate(token, { session_duration_minutes: 60 });
             }
           }
-
-          const returnTo = sessionStorage.getItem('returnTo');
-          if (returnTo) {
-            sessionStorage.removeItem('returnTo');
-            window.location.href = returnTo;
-          } else {
-            window.location.href = '/';
-          }
+          redirectAfterAuth();
         } catch {
           window.location.href = window.location.origin + '/oauth/login';
         }

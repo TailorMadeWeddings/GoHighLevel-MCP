@@ -26,6 +26,8 @@
     <script type="module">
       import { parseOAuthAuthorizeParams, StytchUIClient } from 'https://esm.sh/@stytch/vanilla-js';
 
+      const RETURN_KEY = 'ghl_mcp_oauth_return';
+
       (async () => {
         const publicToken = document.documentElement.dataset.stytchToken;
         const stytch = new StytchUIClient(publicToken);
@@ -36,10 +38,15 @@
         // Check session — redirect to login if not authenticated
         const session = stytch.session.getSync();
         if (!session) {
-          sessionStorage.setItem('returnTo', window.location.href);
+          // Stash the full authorize URL (with OAuth query params) in localStorage
+          // so it survives magic link opening in a new tab
+          localStorage.setItem(RETURN_KEY, window.location.href);
           window.location.href = window.location.origin + '/oauth/login';
           return;
         }
+
+        // We're authenticated — clean up the stash
+        localStorage.removeItem(RETURN_KEY);
 
         // Start the OAuth authorize flow to get client info
         let clientName = null;

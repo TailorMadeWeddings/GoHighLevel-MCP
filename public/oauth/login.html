@@ -17,6 +17,7 @@
     <script type="module">
       import { OAuthProviders, Products, StytchUIClient } from 'https://esm.sh/@stytch/vanilla-js';
 
+      const RETURN_KEY = 'ghl_mcp_oauth_return';
       const publicToken = document.documentElement.dataset.stytchToken;
       const stytch = new StytchUIClient(publicToken);
 
@@ -36,12 +37,14 @@
       const callbacks = {
         onEvent: (evt) => {
           if (evt.type !== 'AUTHENTICATE_FLOW_COMPLETE') return;
-          const returnTo = sessionStorage.getItem('returnTo');
+          // OTP/password flows complete in the same tab — redirect back to authorize
+          const returnTo = localStorage.getItem(RETURN_KEY);
           if (returnTo) {
-            sessionStorage.removeItem('returnTo');
+            localStorage.removeItem(RETURN_KEY);
             window.location.href = returnTo;
           } else {
-            window.location.href = '/';
+            // Fallback: go to authorize without params (will show an error, but won't leak to /)
+            window.location.href = window.location.origin + '/oauth/authorize';
           }
         },
       };
