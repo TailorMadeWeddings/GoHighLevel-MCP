@@ -1552,6 +1552,12 @@ export interface MCPDeleteEmailTemplateParams {
   templateId: string;
 }
 
+export interface MCPGetEmailTemplateContentParams {
+  templateId?: string;
+  previewUrl?: string;
+  locationId?: string;
+}
+
 // LOCATION API INTERFACES - Based on Locations API v2021-07-28
 
 // Location Settings Schema

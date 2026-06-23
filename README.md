@@ -181,10 +181,11 @@ This comprehensive MCP (Model Context Protocol) server connects Claude Desktop d
 **Schedule Control:**
 - `create_block_slot`, `update_block_slot` - Time blocking
 
-### 📧 Email Marketing (5 Tools)
+### 📧 Email Marketing (6 Tools)
 - `get_email_campaigns` - Campaign management
 - `create_email_template`, `get_email_templates` - Template system
 - `update_email_template`, `delete_email_template`
+- `get_email_template_content` - Fetch a template's rendered HTML body inline (resolves the Firebase previewUrl server-side)
 
 ### 🏢 Location Management (24 Tools)
 **Sub-Account Management:**

@@ -3,6 +3,7 @@
  * Exposes email campaign and template management capabilities to the MCP server
  */
 
+import axios from 'axios';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GHLApiClient } from '../clients/ghl-api-client.js';
 import {
@@ -11,6 +12,7 @@ import {
   MCPGetEmailTemplatesParams,
   MCPUpdateEmailTemplateParams,
   MCPDeleteEmailTemplateParams,
+  MCPGetEmailTemplateContentParams,
   GHLEmailCampaign,
   GHLEmailTemplate
 } from '../types/ghl-types.js';
@@ -129,6 +131,27 @@ export class EmailTools {
           },
           required: ['templateId']
         }
+      },
+      {
+        name: 'get_email_template_content',
+        description: 'Fetch the rendered HTML body of an email template by ID (or by previewUrl) and return it inline. Resolves the template\'s Firebase previewUrl server-side and fetches it. Use this to read live template content for auditing/diffing against a blueprint.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            templateId: {
+              type: 'string',
+              description: 'The ID of the template. Resolved to a previewUrl via the email template list. Provide this or previewUrl.'
+            },
+            previewUrl: {
+              type: 'string',
+              description: 'The Firebase previewUrl of the template (e.g. from get_email_templates output). Fast path - fetched directly, no listing needed. Provide this or templateId.'
+            },
+            locationId: {
+              type: 'string',
+              description: 'Optional. Defaults to the active sub-account (same default as the other email tools).'
+            }
+          }
+        }
       }
     ];
   }
@@ -148,6 +171,8 @@ export class EmailTools {
         return this.updateEmailTemplate(args as MCPUpdateEmailTemplateParams);
       case 'delete_email_template':
         return this.deleteEmailTemplate(args as MCPDeleteEmailTemplateParams);
+      case 'get_email_template_content':
+        return this.getEmailTemplateContent(args as MCPGetEmailTemplateContentParams);
       default:
         throw new Error(`Unknown email tool: ${name}`);
     }
@@ -231,4 +256,102 @@ export class EmailTools {
       throw new Error(`Failed to delete email template: ${error}`);
     }
   }
-} 
+
+  /**
+   * Fetch a Firebase-hosted previewUrl server-side with a plain GET.
+   * No auth header is sent - the download token is already in the URL.
+   * Never throws: returns a status/ok pair instead.
+   */
+  private async fetchFirebaseHtml(url: string): Promise<{ ok: boolean; status: number; html?: string }> {
+    try {
+      const response = await axios.get<string>(url, {
+        timeout: 15000,
+        responseType: 'text',
+        // Keep the body as a raw string regardless of content-type.
+        transformResponse: [(data) => data],
+        // Never throw on non-2xx - we inspect the status ourselves.
+        validateStatus: () => true
+      });
+      const ok = response.status >= 200 && response.status < 300;
+      return { ok, status: response.status, html: ok ? (response.data as string) : undefined };
+    } catch (error: any) {
+      // Network/timeout error - surface as a non-ok status without throwing.
+      console.error(`[EmailTools] Firebase fetch error: ${error?.message ?? String(error)}`);
+      return { ok: false, status: error?.response?.status ?? 0 };
+    }
+  }
+
+  /**
+   * Resolve a templateId to its previewUrl by reusing the existing list call
+   * (which carries the GHL auth + active sub-account routing).
+   * NOTE: the flat list does not enumerate templates that live inside folders.
+   */
+  private async resolvePreviewUrl(templateId: string): Promise<{ previewUrl?: string; name?: string }> {
+    const response = await this.ghlClient.getEmailTemplates({ limit: 200, offset: 0 });
+    const templates: GHLEmailTemplate[] = (response.success && response.data) ? response.data : [];
+    const hit = templates.find((t) => t.id === templateId);
+    return { previewUrl: hit?.previewUrl, name: hit?.name };
+  }
+
+  /**
+   * Fetch the rendered HTML body of an email template and return it inline.
+   * Hard requirement: this must NEVER throw - a single uncaught exception has
+   * previously crash-looped the Railway server. Always return { success, ... }.
+   */
+  private async getEmailTemplateContent(
+    params: MCPGetEmailTemplateContentParams
+  ): Promise<{ success: boolean; templateId?: string; name?: string; sizeBytes?: number; html?: string; error?: string }> {
+    try {
+      let { templateId, previewUrl } = params;
+
+      if (!templateId && !previewUrl) {
+        return { success: false, error: 'Provide either templateId or previewUrl.' };
+      }
+
+      let name: string | undefined;
+
+      // Resolve previewUrl from the listing when only an ID was supplied.
+      if (!previewUrl && templateId) {
+        const resolved = await this.resolvePreviewUrl(templateId);
+        previewUrl = resolved.previewUrl;
+        name = resolved.name;
+        if (!previewUrl) {
+          return {
+            success: false,
+            error: `templateId ${templateId} not found in the template list ` +
+              `(it may live inside a folder, which the flat list does not enumerate - ` +
+              `pass previewUrl directly, or implement folder traversal).`
+          };
+        }
+      }
+
+      let resp = await this.fetchFirebaseHtml(previewUrl!);
+
+      // Stale-token retry: Firebase download tokens rotate when a template is
+      // updated. If we have an ID, re-resolve a fresh URL once and retry.
+      if (!resp.ok && (resp.status === 403 || resp.status === 401) && templateId) {
+        console.error(`[EmailTools] Stale token for template ${templateId} (HTTP ${resp.status}); re-resolving previewUrl.`);
+        const resolved = await this.resolvePreviewUrl(templateId);
+        if (resolved.previewUrl) {
+          name = name ?? resolved.name;
+          resp = await this.fetchFirebaseHtml(resolved.previewUrl);
+        }
+      }
+
+      if (!resp.ok || !resp.html) {
+        return { success: false, error: `Firebase fetch failed (HTTP ${resp.status}).` };
+      }
+
+      return {
+        success: true,
+        templateId,
+        name,
+        sizeBytes: Buffer.byteLength(resp.html, 'utf8'),
+        html: resp.html
+      };
+    } catch (error: any) {
+      // Must never throw - see hard constraints.
+      return { success: false, error: `get_email_template_content failed: ${error?.message ?? String(error)}` };
+    }
+  }
+}

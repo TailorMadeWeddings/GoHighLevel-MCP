@@ -500,8 +500,8 @@ class GHLMCPServer {
    */
   private isEmailTool(toolName: string): boolean {
     const emailToolNames = [
-      'get_email_campaigns', 'create_email_template', 'get_email_templates', 
-      'update_email_template', 'delete_email_template'
+      'get_email_campaigns', 'create_email_template', 'get_email_templates',
+      'update_email_template', 'delete_email_template', 'get_email_template_content'
     ];
     return emailToolNames.includes(toolName);
   }
