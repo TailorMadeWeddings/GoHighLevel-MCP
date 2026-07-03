@@ -79,7 +79,7 @@ export class EmailTools {
       },
       {
         name: 'get_email_templates',
-        description: 'Get a list of email templates from GoHighLevel.',
+        description: 'Get a list of email templates from GoHighLevel. Without folderId, returns root-level templates and folder objects. With folderId, returns the templates inside that folder.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -92,6 +92,15 @@ export class EmailTools {
               type: 'number',
               description: 'Number of templates to skip for pagination.',
               default: 0
+            },
+            folderId: {
+              type: 'string',
+              description: 'List the templates inside this folder ID; omit for root level. Folder IDs are returned by the root-level call as items with templateType "folder".'
+            },
+            includeNested: {
+              type: 'boolean',
+              description: 'When true, fetches root-level templates plus all templates inside every folder, returning a flat list. Each template includes a "folderName" and "folderId" field indicating which folder it came from (null for root-level). This makes N+1 API calls (one per folder). Cannot be combined with folderId.',
+              default: false
             }
           }
         }
@@ -211,19 +220,67 @@ export class EmailTools {
     }
   }
 
-  private async getEmailTemplates(params: MCPGetEmailTemplatesParams): Promise<{ success: boolean; templates: GHLEmailTemplate[]; message: string }> {
+  /**
+   * Extract the builders array from the GHL email templates response.
+   * The API returns { templates: { builders: [...], total: [...] } } but
+   * historically this was typed as a flat array.
+   */
+  private extractBuilders(data: any): GHLEmailTemplate[] {
+    if (Array.isArray(data)) return data;
+    const builders = data?.templates?.builders ?? data?.builders;
+    return Array.isArray(builders) ? builders : [];
+  }
+
+  private async getEmailTemplates(params: MCPGetEmailTemplatesParams): Promise<{ success: boolean; templates: any; message: string }> {
     try {
+      const { includeNested, folderId } = params;
+
       const response = await this.ghlClient.getEmailTemplates(params);
       if (!response.success || !response.data) {
-        throw new Error(response.error?.message || 'Failed to get email templates.');
+        return { success: false, templates: [], message: response.error?.message || 'Failed to get email templates.' };
       }
+
+      const builders = this.extractBuilders(response.data);
+
+      // If includeNested is requested (and no specific folderId), fetch all folder children
+      if (includeNested && !folderId) {
+        const folders = builders.filter((t: any) => t.templateType === 'folder');
+        const rootTemplates = builders
+          .filter((t: any) => t.templateType !== 'folder')
+          .map((t: any) => ({ ...t, folderName: null, folderId: null }));
+
+        const nested: any[] = [];
+        for (const folder of folders) {
+          try {
+            const folderResp = await this.ghlClient.getEmailTemplates({
+              limit: params.limit ?? 200,
+              offset: 0,
+              folderId: folder.id
+            });
+            const folderBuilders = this.extractBuilders(folderResp?.data);
+            for (const child of folderBuilders) {
+              nested.push({ ...child, folderName: folder.name, folderId: folder.id });
+            }
+          } catch (err: any) {
+            console.error(`[EmailTools] Failed to fetch folder ${folder.id} (${folder.name}): ${err?.message ?? String(err)}`);
+          }
+        }
+
+        const allTemplates = [...rootTemplates, ...nested];
+        return {
+          success: true,
+          templates: allTemplates,
+          message: `Successfully retrieved ${rootTemplates.length} root templates and ${nested.length} nested templates from ${folders.length} folders.`
+        };
+      }
+
       return {
         success: true,
-        templates: response.data,
-        message: `Successfully retrieved ${response.data.length} email templates.`
+        templates: builders,
+        message: `Successfully retrieved ${builders.length} email templates.`
       };
-    } catch (error) {
-      throw new Error(`Failed to get email templates: ${error}`);
+    } catch (error: any) {
+      return { success: false, templates: [], message: `Failed to get email templates: ${error?.message ?? String(error)}` };
     }
   }
 
@@ -284,13 +341,34 @@ export class EmailTools {
   /**
    * Resolve a templateId to its previewUrl by reusing the existing list call
    * (which carries the GHL auth + active sub-account routing).
-   * NOTE: the flat list does not enumerate templates that live inside folders.
+   * Searches root-level templates first, then falls back to folder contents.
    */
   private async resolvePreviewUrl(templateId: string): Promise<{ previewUrl?: string; name?: string }> {
     const response = await this.ghlClient.getEmailTemplates({ limit: 200, offset: 0 });
-    const templates: GHLEmailTemplate[] = (response.success && response.data) ? response.data : [];
-    const hit = templates.find((t) => t.id === templateId);
-    return { previewUrl: hit?.previewUrl, name: hit?.name };
+    const builders = this.extractBuilders(response?.data);
+
+    // Search root-level templates first
+    let hit = builders.find((t: any) => t.id === templateId);
+    if (hit) return { previewUrl: hit.previewUrl, name: hit.name };
+
+    // Folder fallback: search inside each folder
+    const folders = builders.filter((t: any) => t.templateType === 'folder');
+    for (const folder of folders) {
+      try {
+        const folderResp = await this.ghlClient.getEmailTemplates({
+          limit: 200,
+          offset: 0,
+          folderId: folder.id
+        });
+        const folderBuilders = this.extractBuilders(folderResp?.data);
+        hit = folderBuilders.find((t: any) => t.id === templateId);
+        if (hit) return { previewUrl: hit.previewUrl, name: hit.name };
+      } catch {
+        // Skip this folder, keep searching
+      }
+    }
+
+    return {};
   }
 
   /**
@@ -318,9 +396,7 @@ export class EmailTools {
         if (!previewUrl) {
           return {
             success: false,
-            error: `templateId ${templateId} not found in the template list ` +
-              `(it may live inside a folder, which the flat list does not enumerate - ` +
-              `pass previewUrl directly, or implement folder traversal).`
+            error: `templateId ${templateId} not found at root or in any folder.`
           };
         }
       }

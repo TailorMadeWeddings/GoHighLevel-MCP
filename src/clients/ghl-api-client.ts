@@ -2227,13 +2227,18 @@ export class GHLApiClient {
     }
   }
 
-  async getEmailTemplates(params: MCPGetEmailTemplatesParams): Promise<GHLApiResponse<GHLEmailTemplate[]>> {
+  async getEmailTemplates(params: MCPGetEmailTemplatesParams): Promise<GHLApiResponse<any>> {
     try {
-      const response: AxiosResponse<GHLEmailTemplate[]> = await this.axiosInstance.get('/emails/builder', {
-        params: {
-          locationId: this.config.locationId,
-          ...params
-        },
+      const { folderId, includeNested, ...rest } = params;
+      const queryParams: Record<string, any> = {
+        locationId: this.config.locationId,
+        ...rest
+      };
+      if (folderId) {
+        queryParams.parentId = folderId;
+      }
+      const response: AxiosResponse<any> = await this.axiosInstance.get('/emails/builder', {
+        params: queryParams,
         headers: this.getEmailBuilderHeaders()
       });
       return this.wrapResponse(response.data);

@@ -1540,6 +1540,8 @@ export interface MCPCreateEmailTemplateParams {
 export interface MCPGetEmailTemplatesParams {
   limit?: number;
   offset?: number;
+  folderId?: string;
+  includeNested?: boolean;
 }
 
 export interface MCPUpdateEmailTemplateParams {
