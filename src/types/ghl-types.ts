@@ -1560,6 +1560,107 @@ export interface MCPGetEmailTemplateContentParams {
   locationId?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Email Statistics (Email API v3) - engagement stats for workflow campaigns
+// Source: GoHighLevel/highlevel-api-docs apps/v3/emails-v3.json
+// These endpoints require the `Version: v3` header (NOT the v2 2021-* value)
+// and the emails/campaigns.readonly + emails/stats.readonly PIT scopes.
+// ---------------------------------------------------------------------------
+
+export type GHLEmailStatsSource = 'email-campaigns' | 'workflow-campaigns' | 'bulk-actions';
+
+// A campaign as returned by the workflow-campaigns list/detail endpoints.
+export interface GHLWorkflowCampaign {
+  id: string;              // campaign id - use for detail + stats
+  name: string;
+  status: string;          // 'published' | 'draft'
+  source?: string;         // 'workflow'
+  sourceId?: string;       // workflow UUID (join key to ghl_get_workflows)
+  deleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GHLListWorkflowCampaignsResponse {
+  campaigns: GHLWorkflowCampaign[];
+  total: number;
+  traceId?: string;
+}
+
+// One email action (step) inside a workflow campaign.
+export interface GHLWorkflowCampaignSubSource {
+  id: string;              // subSourceId - pass to stats for per-email numbers
+  name: string;
+  subject?: string;
+  fromName?: string;
+  fromEmail?: string;
+  previewText?: string;
+  editorType?: string;     // 'html' | 'builder' | 'text'
+  isPlainText?: boolean;
+  editorContentUrl?: string; // fetchable HTML for copy audit
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GHLGetWorkflowCampaignResponse extends GHLWorkflowCampaign {
+  subSources: GHLWorkflowCampaignSubSource[];
+}
+
+// Percentages (openRate etc.) are already computed server-side by GHL.
+// bounceRate folds permanentFail + temporaryFail.
+export interface GHLEmailCampaignStats {
+  sent?: number;
+  accepted?: number;
+  delivered?: number;
+  opened?: number;
+  clicked?: number;
+  replied?: number;
+  unsubscribed?: number;
+  complained?: number;
+  permanentFail?: number;
+  temporaryFail?: number;
+  rejected?: number;
+  failed?: number;
+  openRate?: number;
+  clickRate?: number;
+  replyRate?: number;
+  unsubscribeRate?: number;
+  complaintRate?: number;
+  bounceRate?: number;
+}
+
+export interface GHLGetCampaignStatsResponse {
+  locationId: string;
+  source: string;
+  sourceId: string;
+  subSourceId?: string;
+  stats: GHLEmailCampaignStats;
+  traceId?: string;
+}
+
+// MCP Tool Parameters - Email Statistics
+export interface MCPListWorkflowEmailCampaignsParams {
+  status?: 'published' | 'draft';
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MCPGetWorkflowEmailCampaignParams {
+  campaignId: string;
+}
+
+export interface MCPGetEmailCampaignStatsParams {
+  source?: GHLEmailStatsSource;
+  sourceId: string;
+  subSourceId?: string;
+}
+
+export interface MCPGetWorkflowEmailReportParams {
+  workflow?: string;   // name (contains), workflow UUID, or campaign id
+  campaignId?: string; // direct campaign id (skips resolution)
+}
+
 // LOCATION API INTERFACES - Based on Locations API v2021-07-28
 
 // Location Settings Schema
