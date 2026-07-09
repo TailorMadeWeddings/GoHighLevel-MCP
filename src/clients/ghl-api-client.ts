@@ -80,6 +80,12 @@ import {
   MCPUpdateEmailTemplateParams,
   MCPDeleteEmailTemplateParams,
   GHLEmailTemplate,
+  // Email statistics (v3) types
+  GHLEmailStatsSource,
+  MCPListWorkflowEmailCampaignsParams,
+  GHLListWorkflowCampaignsResponse,
+  GHLGetWorkflowCampaignResponse,
+  GHLGetCampaignStatsResponse,
   // Location types
   GHLLocationSearchResponse,
   GHLLocationDetailsResponse,
@@ -2273,6 +2279,100 @@ export class GHLApiClient {
       const response: AxiosResponse<any> = await this.axiosInstance.delete(`/emails/builder/${this.config.locationId}/${templateId}`, {
         headers: this.getEmailBuilderHeaders()
       });
+      return this.wrapResponse(response.data);
+    } catch (error) {
+      throw this.handleApiError(error as AxiosError<GHLErrorResponse>);
+    }
+  }
+
+  /**
+   * EMAIL STATISTICS API METHODS (Email API v3)
+   *
+   * These hit /emails/locations/{locationId}/... and require the `Version: v3`
+   * header - NOT the 2021-* value the rest of the email tools send. The PIT for
+   * each sub-account must carry the emails/campaigns.readonly and
+   * emails/stats.readonly scopes or these return 401.
+   */
+
+  /**
+   * Custom headers for the Email Statistics API (uses Version v3).
+   */
+  private getEmailStatsHeaders() {
+    return {
+      'Authorization': `Bearer ${this.config.accessToken}`,
+      'Version': 'v3', // Email API v3 - required, do not inherit the v2 default
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  }
+
+  /**
+   * Expose the active sub-account's locationId (for tools that log/annotate it).
+   */
+  getLocationId(): string {
+    return this.config.locationId;
+  }
+
+  /**
+   * List workflow email campaigns for the active sub-account.
+   * GET /emails/locations/{locationId}/campaigns/workflows
+   */
+  async listWorkflowEmailCampaigns(
+    params: MCPListWorkflowEmailCampaignsParams = {}
+  ): Promise<GHLApiResponse<GHLListWorkflowCampaignsResponse>> {
+    try {
+      const queryParams: Record<string, any> = {};
+      if (params.status) queryParams.status = params.status;
+      if (params.search) queryParams.search = params.search;
+      queryParams.limit = params.limit ?? 20;
+      queryParams.offset = params.offset ?? 0;
+
+      const response: AxiosResponse<GHLListWorkflowCampaignsResponse> = await this.axiosInstance.get(
+        `/emails/locations/${this.config.locationId}/campaigns/workflows`,
+        { params: queryParams, headers: this.getEmailStatsHeaders() }
+      );
+      return this.wrapResponse(response.data);
+    } catch (error) {
+      throw this.handleApiError(error as AxiosError<GHLErrorResponse>);
+    }
+  }
+
+  /**
+   * Get a single workflow email campaign, including its per-email steps (subSources).
+   * GET /emails/locations/{locationId}/campaigns/workflows/{campaignId}
+   */
+  async getWorkflowEmailCampaign(
+    campaignId: string
+  ): Promise<GHLApiResponse<GHLGetWorkflowCampaignResponse>> {
+    try {
+      const response: AxiosResponse<GHLGetWorkflowCampaignResponse> = await this.axiosInstance.get(
+        `/emails/locations/${this.config.locationId}/campaigns/workflows/${campaignId}`,
+        { headers: this.getEmailStatsHeaders() }
+      );
+      return this.wrapResponse(response.data);
+    } catch (error) {
+      throw this.handleApiError(error as AxiosError<GHLErrorResponse>);
+    }
+  }
+
+  /**
+   * Get engagement statistics for a campaign (or a single email step).
+   * GET /emails/locations/{locationId}/campaigns/stats/{source}/{sourceId}
+   * Returns a rolling last-30-days window (endpoint has no from/to params).
+   */
+  async getEmailCampaignStats(
+    source: GHLEmailStatsSource,
+    sourceId: string,
+    subSourceId?: string
+  ): Promise<GHLApiResponse<GHLGetCampaignStatsResponse>> {
+    try {
+      const response: AxiosResponse<GHLGetCampaignStatsResponse> = await this.axiosInstance.get(
+        `/emails/locations/${this.config.locationId}/campaigns/stats/${source}/${sourceId}`,
+        {
+          params: subSourceId ? { subSourceId } : undefined,
+          headers: this.getEmailStatsHeaders()
+        }
+      );
       return this.wrapResponse(response.data);
     } catch (error) {
       throw this.handleApiError(error as AxiosError<GHLErrorResponse>);
