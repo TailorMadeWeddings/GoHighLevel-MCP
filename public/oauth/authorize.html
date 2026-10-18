@@ -97,10 +97,10 @@
             });
             // Normalize double-? bug: Stytch appends ?code= even when redirect_uri already has query params
             const redirect = new URL(res.redirect_uri.replace(/\?([^?]*)\?/, '?$1&'));
-            // Stytch omits state and iss from the redirect; clients reject callbacks without them
-            if (params.state && !redirect.searchParams.has('state')) redirect.searchParams.set('state', params.state);
+            // Stytch sets iss to "stytch.com/project-..." but its AS metadata names the vanity
+            // domain as issuer; clients enforcing RFC 9207 reject the mismatch, so align them
             const issuer = document.documentElement.dataset.stytchIssuer;
-            if (issuer && !redirect.searchParams.has('iss')) redirect.searchParams.set('iss', issuer);
+            if (issuer) redirect.searchParams.set('iss', issuer);
             window.location.href = redirect.toString();
           } catch {
             errorMsg.innerHTML = '<p class="error">Something went wrong. Please try again.</p>';
