@@ -479,12 +479,13 @@ class GHLMCPHttpServer {
     for (const page of oauthPages) {
       this.app.get(`/oauth/${page}`, (req, res) => {
         const publicToken = process.env.STYTCH_PUBLIC_TOKEN || '';
+        const issuer = process.env.STYTCH_PROJECT_DOMAIN || '';
         const htmlPath = path.resolve(process.cwd(), 'public', 'oauth', `${page}.html`);
 
         try {
           let html = fs.readFileSync(htmlPath, 'utf-8');
           // Inject the public token as a data attribute on <html> so the JS can read it
-          html = html.replace('<html lang="en">', `<html lang="en" data-stytch-token="${publicToken}">`);
+          html = html.replace('<html lang="en">', `<html lang="en" data-stytch-token="${publicToken}" data-stytch-issuer="${issuer}">`);
           res.type('html').send(html);
         } catch (err) {
           console.error(`[GHL MCP HTTP] Failed to serve /oauth/${page}:`, err);

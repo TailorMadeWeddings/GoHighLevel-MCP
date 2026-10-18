@@ -96,8 +96,12 @@
               consent_granted: granted,
             });
             // Normalize double-? bug: Stytch appends ?code= even when redirect_uri already has query params
-            const redirectUri = res.redirect_uri.replace(/\?([^?]*)\?/, '?$1&');
-            window.location.href = redirectUri;
+            const redirect = new URL(res.redirect_uri.replace(/\?([^?]*)\?/, '?$1&'));
+            // Stytch omits state and iss from the redirect; clients reject callbacks without them
+            if (params.state && !redirect.searchParams.has('state')) redirect.searchParams.set('state', params.state);
+            const issuer = document.documentElement.dataset.stytchIssuer;
+            if (issuer && !redirect.searchParams.has('iss')) redirect.searchParams.set('iss', issuer);
+            window.location.href = redirect.toString();
           } catch {
             errorMsg.innerHTML = '<p class="error">Something went wrong. Please try again.</p>';
             allowBtn.disabled = false;
