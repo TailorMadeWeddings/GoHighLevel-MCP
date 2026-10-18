@@ -632,11 +632,13 @@ class GHLMCPHttpServer {
           await transport.handleRequest(req, res, req.body);
           return;
         } else {
-          res.status(400).json({
+          // Unknown session (e.g. server restarted) must be 404 so the client re-initializes
+          const status = sessionId ? 404 : 400;
+          res.status(status).json({
             jsonrpc: '2.0',
             error: {
               code: -32000,
-              message: 'Bad Request: No valid session ID provided',
+              message: sessionId ? 'Session not found' : 'Bad Request: No valid session ID provided',
             },
             id: null,
           });
@@ -660,7 +662,7 @@ class GHLMCPHttpServer {
     this.app.get('/mcp', requireAuth, async (req: express.Request, res: express.Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       if (!sessionId || !this.streamableTransports.has(sessionId)) {
-        res.status(400).send('Invalid or missing session ID');
+        res.status(sessionId ? 404 : 400).send(sessionId ? 'Session not found' : 'Missing session ID');
         return;
       }
       const transport = this.streamableTransports.get(sessionId)!;
@@ -671,7 +673,7 @@ class GHLMCPHttpServer {
     this.app.delete('/mcp', requireAuth, async (req: express.Request, res: express.Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       if (!sessionId || !this.streamableTransports.has(sessionId)) {
-        res.status(400).send('Invalid or missing session ID');
+        res.status(sessionId ? 404 : 400).send(sessionId ? 'Session not found' : 'Missing session ID');
         return;
       }
       console.log(`[GHL MCP HTTP] Session termination request: ${sessionId}`);
